@@ -1,0 +1,6 @@
+categoria,dias_atraso_consumo_min,dias_atraso_consumo_max,provision_sin_garantia_pct
+0 - Normal,0,8,1.0
+1 - Con Problemas Potenciales (CPP),9,30,5.0
+2 - Deficiente,31,60,25.0
+3 - Dudoso,61,120,60.0
+4 - Pérdida,121,99999,100.0
