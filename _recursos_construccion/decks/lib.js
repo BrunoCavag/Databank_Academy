@@ -284,10 +284,28 @@ function sTakeaways(D, o) {
   if (o.notes) s.addNotes(o.notes);
 }
 
+
+function pngSize(file) { const b = require("fs").readFileSync(file); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) }; }
+function sImage(D, o) {
+  const s = D.slide(); s.addText(o.title, { placeholder: "title" });
+  const { w: pw, h: ph } = pngSize(o.img), ar = pw / ph;
+  if (ar > 2.6) { // ancho: imagen arriba, puntos abajo
+    let w = W - 2 * MX, h = w / ar; if (h > 3.7) { h = 3.7; w = h * ar; }
+    s.addImage({ path: o.img, x: (W - w) / 2, y: 1.45, w, h });
+    if (o.points) s.addText(bullets(o.points, o.psize || 15, D.C.text1), { x: MX, y: 1.6 + h, w: W - 2 * MX, h: 6.65 - 1.6 - h, valign: "top", margin: 0, isTextBox: true });
+  } else { // imagen a la izquierda, puntos a la derecha
+    let w = 7.9, h = w / ar; if (h > 5.2) { h = 5.2; w = h * ar; }
+    s.addImage({ path: o.img, x: MX, y: 1.45 + (5.2 - h) / 2, w, h });
+    const x = MX + w + 0.35; if (o.points) s.addText(bullets(o.points, o.psize || 15, D.C.text1), { x, y: 1.6, w: W - MX - x, h: 5.0, valign: "top", margin: 0, isTextBox: true });
+  }
+  if (o.source) s.addText(o.source, { x: MX, y: 6.62, w: 8, h: 0.3, fontSize: 10, color: HEX.slate, italic: true, margin: 0, isTextBox: true });
+  if (o.notes) s.addNotes(o.notes);
+}
+
 async function save(D, file) {
   await D.pres.writeFile({ fileName: file });
   await applyTheme(file, THEME);
   console.log("OK", file);
 }
 
-module.exports = { newDeck, sTitle, sSection, sAgenda, sCards, sFlow, sFormula, sChart, sTable, sCompare, sStats, sQuestion, sLab, sTakeaways, save, HEX, PCT, PCT1 };
+module.exports = { newDeck, sTitle, sSection, sAgenda, sCards, sFlow, sFormula, sChart, sTable, sCompare, sStats, sQuestion, sLab, sTakeaways, sImage, save, HEX, PCT, PCT1 };

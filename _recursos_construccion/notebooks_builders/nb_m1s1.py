@@ -10,23 +10,66 @@ cells = [
 
 Al terminar este laboratorio podrás:
 
-1. Recorrer el **ciclo de vida del crédito** (originación → seguimiento → cobranza → recuperación) con datos.
-2. Medir el **embudo de originación**: solicitudes, filtros duros, decisión por score y capacidad de pago.
-3. Construir la **curva de estrategia** (tasa de aprobación vs. tasa de malos) y usarla para traducir el **apetito de riesgo** en un punto de corte.
-4. Cuantificar el efecto de una **política de capacidad de pago** (cuota/ingreso) y de las **excepciones**.
+1. Explicar qué hace distinto al **crédito minorista** frente al corporativo y pyme: granularidad, automatización y gestión estadística.
+2. Recorrer el **ciclo de vida completo del crédito**: diseño del producto, originación, admisión, seguimiento, cobranza, recuperación y cierre.
+3. Medir el **embudo de originación** y traducir el **apetito de riesgo** en un punto de corte con la curva de estrategia.
+4. Diseñar **políticas, límites, facultades y tratamiento de excepciones**, y medir su efecto.
 
 **Datos:** `hc_application_sintetico.csv`: 60 mil solicitudes con el esquema de *Home Credit Default Risk* (Kaggle). Es una muestra **sintética** con relaciones económicas plausibles: la tasa de incumplimiento ronda el 8 %, como en el original. `TARGET = 1` significa que el cliente incumplió (90+ días) en su ventana de desempeño.
 
 | Bloque | Tiempo | Contenido |
 |---|---|---|
-| 1 | 15 min | Carga y lectura del portafolio de solicitudes |
-| 2 | 25 min | Embudo de originación y políticas de filtro |
-| 3 | 30 min | Score, curva de estrategia y apetito de riesgo |
-| 4 | 25 min | Capacidad de pago (RCI) y límites |
-| 5 | 15 min | Excepciones y overrides |
+| 0 | 15 min | Minorista vs. corporativo/pyme y el ciclo de vida completo |
+| 1 | 10 min | Carga y lectura del portafolio de solicitudes |
+| 2 | 20 min | Embudo de originación y filtros duros |
+| 3 | 25 min | Score, curva de estrategia y apetito de riesgo |
+| 4 | 20 min | Capacidad de pago (RCI) y límites |
+| 5 | 20 min | Excepciones y facultades |
 | 6 | 10 min | Ejercicios y discusión |
 """),
 ("code", SETUP),
+("md", """
+## 0. ¿Qué hace distinto al crédito minorista?
+
+| Dimensión | Minorista (consumo, tarjeta, hipotecario, micro) | Pyme | Corporativo |
+|---|---|---|---|
+| Número de deudores | Cientos de miles o millones | Miles a decenas de miles | Decenas a cientos |
+| Exposición individual | Pequeña: ninguna pone en riesgo al banco | Media | Grande: concentración |
+| Información | Solicitud, buró, comportamiento transaccional | Estados financieros parciales + buró | Estados auditados, rating externo |
+| Decisión | **Automatizada**: score + políticas + motor de decisión | Mixta: score + analista | Analista y comité, caso a caso |
+| Gestión del riesgo | **Estadística y por portafolio** (cosechas, segmentos) | Mixta | Individual (rating, covenants) |
+| Basilea | Cartera minorista ("retail"), correlaciones bajas | Puede tratarse como minorista si la exposición es pequeña | Corporativo, correlación alta |
+
+La consecuencia práctica es la **granularidad**: el riesgo idiosincrático se diversifica y lo que importa son las **tasas** (PD, LGD por segmento) y el **ciclo económico**. Comparemos la concentración de una cartera minorista con una corporativa simulada.
+"""),
+("code", """
+rng = np.random.default_rng(1)
+app0 = pd.read_csv(DATA / "hc_application_sintetico.csv")
+minorista = app0["AMT_CREDIT"].values
+corporativa = rng.lognormal(mean=np.log(8e6), sigma=1.2, size=150)          # 150 empresas, montos de millones
+def concentracion(x):
+    w = np.sort(x)[::-1] / x.sum()
+    return pd.Series({"n_deudores": len(x), "saldo_total_MM": x.sum() / 1e6, "top10_%": w[:10].sum(),
+                      "HHI": (w ** 2).sum(), "n_equivalente (1/HHI)": 1 / (w ** 2).sum()})
+pd.DataFrame({"Minorista": concentracion(minorista), "Corporativa": concentracion(corporativa)}).style.format("{:,.4f}")
+"""),
+("md", """
+**Lectura:** en la cartera minorista los 10 mayores deudores pesan alrededor de 0,3 % del saldo y el número "equivalente" de deudores (1/HHI) es de decenas de miles. En la corporativa, 10 deudores concentran una fracción grande del saldo. Por eso el minorista se gestiona con **modelos, políticas y portafolios**, y el corporativo con **análisis individual**.
+
+### El ciclo de vida completo del crédito minorista
+
+| Etapa | Decisiones clave | Datos y herramientas |
+|---|---|---|
+| **Diseño del producto** | Mercado objetivo, monto, plazo, tasa, garantías, canal; prueba de rentabilidad | Estudios de mercado, pricing ajustado por riesgo, simulación de P&L |
+| **Originación** | Captación y canales; prescreening | Campañas, preaprobados, scores de propensión |
+| **Admisión** | Aprobar o rechazar, monto, tasa | Score de originación, políticas, capacidad de pago, verificación |
+| **Seguimiento** | Líneas, renovaciones, alertas | Score de comportamiento, alertas tempranas, listas de vigilancia |
+| **Cobranza** | Contacto, refinanciamiento, reestructuración | Score de cobranza, estrategias por tramo, curación |
+| **Recuperación** | Judicial, castigo, venta de cartera | LGD, recuperos, costos |
+| **Cierre** | Cancelación, liberación de garantías, castigo final; lecciones para rediseñar el producto | Análisis de cosechas cerradas, rentabilidad realizada |
+
+El cierre retroalimenta el diseño: la rentabilidad **realizada** de una cosecha es la prueba de que el producto estaba bien diseñado.
+"""),
 ("md", "## 1. Carga y primera lectura de las solicitudes"),
 ("code", """
 app = pd.read_csv(DATA / "hc_application_sintetico.csv")
@@ -70,7 +113,7 @@ ax[1].set_title("Tasa de malos por mes de solicitud (efecto ciclo)"); ax[1].yaxi
 plt.tight_layout(); plt.show()
 """),
 ("md", """
-**Lectura:** el riesgo **no es estable en el tiempo**. Las cosechas originadas en 2022-2023 (inflación alta, tasas altas y desaceleración) muestran más incumplimiento que las de 2025. Esta idea vuelve en los módulos de PD *point-in-time* vs. *through-the-cycle* (Módulo 7) y de *stress testing* (Módulo 9).
+**Lectura:** el riesgo **no es estable en el tiempo**. Las cosechas originadas en 2022-2023 (inflación alta, tasas altas y desaceleración) muestran más incumplimiento que las de 2025. Esta idea vuelve en los módulos de PD *point-in-time* vs. *through-the-cycle* (Módulo 9) y de *stress testing* (Módulo 11).
 
 ## 2. Embudo de originación y filtros duros (*knock-out rules*)
 
@@ -176,7 +219,7 @@ ax1.set_xlabel("Punto de corte del score"); ax1.set_ylabel("Utilidad (MM)"); ax2
 ax1.legend(loc="lower left"); ax1.set_title("Punto de corte: apetito vs. maximización de utilidad"); plt.show()
 """),
 ("md", """
-**Mensaje clave:** el corte que maximiza la utilidad **no tiene por qué coincidir** con el que dicta el apetito. Si el corte rentable implica más riesgo del tolerado, la discusión no es técnica: es de **gobierno** (capital, volatilidad de resultados, reputación, regulación). Volveremos a esto con RAROC en el Módulo 8.
+**Mensaje clave:** el corte que maximiza la utilidad **no tiene por qué coincidir** con el que dicta el apetito. Si el corte rentable implica más riesgo del tolerado, la discusión no es técnica: es de **gobierno** (capital, volatilidad de resultados, reputación, regulación). Volveremos a esto con RAROC en el Módulo 10.
 
 ## 4. Capacidad de pago: relación cuota/ingreso (RCI) y límites
 """),
@@ -233,6 +276,28 @@ print(f"Tasa de excepciones: {base.excepcion.sum() / len(cartera):.1%} de la car
 print(f"Tasa de malos de la cartera total: {cartera.TARGET.mean():.2%}  (sin excepciones: {base.loc[base.aprob_politica, 'TARGET'].mean():.2%})")
 """),
 ("md", """
+### Facultades (autonomías): quién puede aprobar qué
+La matriz de facultades es la traducción operativa del apetito: define el **nivel de aprobación** según monto y riesgo. Toda excepción se aprueba dentro de una facultad y queda registrada.
+"""),
+("code", """
+ext = app[["EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3"]].mean(axis=1)
+app["riesgo"] = pd.cut(app.SCORE_BURO, [0, 380, 480, 1000], labels=["Alto", "Medio", "Bajo"])
+app["tramo_monto"] = pd.cut(app.AMT_CREDIT, [0, 15_000, 40_000, 100_000, 1e9], labels=["<=15k", "15-40k", "40-100k", ">100k"])
+facultad = pd.DataFrame(
+    [["Automático", "Analista", "Jefe de admisión", "Comité de créditos"],
+     ["Automático", "Automático", "Analista", "Jefe de admisión"],
+     ["Automático", "Automático", "Automático", "Analista"]],
+    index=pd.Index(["Alto", "Medio", "Bajo"], name="riesgo"), columns=pd.Index(["<=15k", "15-40k", "40-100k", ">100k"], name="tramo_monto"))
+display(facultad)
+nivel = facultad.stack().rename("nivel").reset_index()
+cnt = app.groupby(["riesgo", "tramo_monto"], observed=True).agg(n=("TARGET", "size"), monto=("AMT_CREDIT", "sum")).reset_index()
+cnt[["riesgo", "tramo_monto"]] = cnt[["riesgo", "tramo_monto"]].astype(str)
+carga = cnt.merge(nivel, on=["riesgo", "tramo_monto"]).groupby("nivel")[["n", "monto"]].sum()
+(carga / carga.sum()).rename(columns={"n": "% solicitudes", "monto": "% monto"}).sort_values("% solicitudes", ascending=False).style.format("{:.1%}")
+"""),
+("md", """
+> **Trade-off:** más autonomía automática significa **menor tiempo de respuesta y costo**, pero más riesgo sin revisión humana. Una regla práctica: el comité debería ver pocos casos, pero con una parte relevante del **monto en riesgo**.
+
 **Gobierno de excepciones:** toda excepción debe registrarse (quién, por qué, con qué autonomía) y su **desempeño debe monitorearse aparte**. Indicadores típicos: % de excepciones sobre aprobaciones, tasa de malos de las excepciones vs. la cartera en política, y límite máximo de excepciones por canal o agencia.
 
 ## 6. Ejercicios
@@ -242,7 +307,7 @@ print(f"Tasa de malos de la cartera total: {cartera.TARGET.mean():.2%}  (sin exc
 4. Propón un límite de excepciones (%) y un indicador de alerta para el comité de riesgos.
 
 ---
-**Conexión con el programa:** en el Módulo 3 reemplazaremos el score de buró por un *scorecard* propio (regresión logística + WoE). En el Módulo 7 la pérdida ex post se convertirá en **pérdida esperada** (PD × LGD × EAD).
+**Conexión con el programa:** en el Módulo 3 reemplazaremos el score de buró por un *scorecard* propio (regresión logística + WoE). En el Módulo 9 la pérdida ex post se convertirá en **pérdida esperada** (PD × LGD × EAD).
 """),
 ]
 

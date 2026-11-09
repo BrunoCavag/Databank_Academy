@@ -7,19 +7,19 @@ cells = [
 ## Objetivos de la sesión (2 horas)
 
 1. Distinguir **población, muestra, parámetro y estimador**, y medir **sesgo, varianza y error cuadrático medio**.
-2. Construir **intervalos de confianza** para una PD (Wald, Wilson, Clopper-Pearson, Jeffreys) y ver cuándo falla cada uno.
-3. Comprobar con simulación la **ley de los grandes números** y el **teorema central del límite**.
-4. Entender la **verosimilitud** y el **estimador de máxima verosimilitud** (MLE): la base de la regresión logística.
-5. Leer la **salida estadística** de un modelo (coeficientes, errores estándar, z, p-valores, IC, log-verosimilitud, pseudo R²).
+2. Construir **intervalos de confianza** para una PD (Wald, Wilson, Clopper-Pearson, Jeffreys), para la **diferencia de dos PDs** y para una **LGD promedio**.
+3. Calcular el **tamaño de muestra** necesario para estimar una PD con una precisión dada.
+4. Comprobar con simulación las **distribuciones muestrales**, la **ley de los grandes números** y el **teorema central del límite**.
+5. Medir incertidumbre sin fórmula con **bootstrap**.
 
 | Bloque | Tiempo | Contenido |
 |---|---|---|
-| 1 | 20 min | Población, muestra y estimadores |
+| 1 | 20 min | Población, muestra, estimadores y shrinkage |
 | 2 | 25 min | Intervalos de confianza para una PD |
-| 3 | 25 min | LGN, TLC y bootstrap |
-| 4 | 30 min | Verosimilitud y MLE |
-| 5 | 15 min | Lectura de resultados estadísticos |
-| 6 | 5 min | Ejercicios |
+| 3 | 30 min | Distribuciones muestrales, LGN, TLC y bootstrap |
+| 4 | 20 min | Intervalos para diferencias de PDs y para la LGD |
+| 5 | 15 min | Tamaño de muestra |
+| 6 | 10 min | Ejercicios |
 """),
 ("code", SETUP + """
 from scipy import stats, optimize
@@ -50,7 +50,7 @@ fig.suptitle("Distribución muestral de la PD estimada", weight="bold"); plt.tig
 ("md", """
 **Un estimador sesgado pero útil:** en segmentos con pocos datos se suele "encoger" la PD hacia la media de la cartera (*shrinkage*):
 $$\\hat p_{shrink} = \\frac{n}{n + k}\\hat p + \\frac{k}{n + k}\\, \\bar p$$
-Tiene **sesgo**, pero mucha menos **varianza**. Es la misma idea que reaparece en la regularización (Módulo 3), en las *target statistics* de CatBoost (Módulo 5) y en Bayes (Módulo 10).
+Tiene **sesgo**, pero mucha menos **varianza**. Es la misma idea que reaparece en la regularización (Módulo 3), en las *target statistics* de CatBoost (Módulo 5) y en Bayes (Módulo 6).
 """),
 ("code", """
 # Segmento chico con PD verdadera 15 %: ¿quién estima mejor, la tasa cruda o la "encogida"?
@@ -136,91 +136,57 @@ print(f"AUC = {auc_obs:.4f}  IC95% bootstrap = [{lo:.4f}, {hi:.4f}]  ->  Gini = 
 plt.hist(boot, bins=30, color=AZUL); plt.axvline(auc_obs, color=ROJO); plt.title("Distribución bootstrap del AUC"); plt.show()
 """),
 ("md", """
-## 4. Verosimilitud y máxima verosimilitud
-Dados datos $d_1, \\dots, d_n$ con $D_i \\sim \\text{Bernoulli}(p)$:
-$$\\mathcal{L}(p) = \\prod_{i=1}^n p^{d_i}(1-p)^{1-d_i}, \\qquad \\ell(p) = \\log \\mathcal{L}(p) = k \\log p + (n-k)\\log(1-p)$$
-Derivando e igualando a cero: $\\hat p_{MLE} = k/n$. La **curvatura** de $\\ell$ en el máximo (información de Fisher) da el error estándar:
-$$I(p) = \\frac{n}{p(1-p)} \\quad\\Rightarrow\\quad SE(\\hat p) = \\sqrt{\\hat p(1-\\hat p)/n}$$
+## 4. Más intervalos: diferencia de dos PDs
+¿La PD del canal digital es realmente distinta de la del canal agencia? El intervalo de **Newcombe** (combinación de dos intervalos de Wilson) se comporta mejor que el de Wald para proporciones bajas.
 """),
 ("code", """
-fig, ax = plt.subplots(figsize=(10, 4.5))
-grid = np.linspace(0.005, 0.4, 500)
-for n, c in [(50, GRIS), (200, ORO), (1000, AZUL)]:
-    k = round(0.08 * n)
-    ll = k * np.log(grid) + (n - k) * np.log(1 - grid)
-    ax.plot(grid, ll - ll.max(), color=c, lw=2, label=f"n={n}, k={k}")
-ax.axhline(-1.92, color=ROJO, ls=":", label="−χ²(1, 0.95)/2  → IC por razón de verosimilitud")
-ax.set_ylim(-10, 0.5); ax.set_xlabel("p"); ax.set_ylabel("ℓ(p) − ℓ(p̂)"); ax.legend(); ax.set_title("Más datos → log-verosimilitud más 'puntiaguda' → menos incertidumbre")
-plt.show()
+from statsmodels.stats.proportion import confint_proportions_2indep
+a = app[app.CANAL == "Digital"].TARGET; b = app[app.CANAL == "Agencia"].TARGET
+for metodo in ["wald", "newcomb"]:
+    lo, hi = confint_proportions_2indep(a.sum(), len(a), b.sum(), len(b), method=metodo)
+    print(f"{metodo:8s} PD digital − PD agencia = {a.mean() - b.mean():+.2%}  IC95 % [{lo:+.2%}, {hi:+.2%}]")
 """),
 ("md", """
-### MLE numérico: de una PD constante a una PD que depende de $x$
-Si dejamos que $p_i$ dependa de las características del cliente mediante $p_i = \\frac{1}{1 + e^{-(\\beta_0 + \\beta_1 x_i)}}$, maximizar $\\ell(\\beta)$ es exactamente **estimar una regresión logística**. Hagámoslo "a mano" con un optimizador y comparemos con `statsmodels`.
+### Intervalo para una LGD promedio (variable continua y acotada)
+La LGD no es una proporción binaria: es una variable continua en [0, 1], a menudo **bimodal** (muchos casos cerca de 0 y de 1). El intervalo t supone normalidad de la **media** (TLC), y conviene contrastarlo con bootstrap.
 """),
 ("code", """
-x = german["duration_in_month"].values
-yv = german["default"].values
-def neg_loglik(beta):
-    eta = beta[0] + beta[1] * x
-    return -np.sum(yv * eta - np.log1p(np.exp(eta)))
-opt = optimize.minimize(neg_loglik, x0=[0, 0], method="BFGS")
-# Error estándar desde el Hessiano analítico de la log-verosimilitud: H = X' W X, con W = diag(p(1-p))
-Xd = np.column_stack([np.ones_like(x), x]).astype(float)
-p_fit = 1 / (1 + np.exp(-Xd @ opt.x))
-H = Xd.T @ (Xd * (p_fit * (1 - p_fit))[:, None])
-se_manual = np.sqrt(np.diag(np.linalg.inv(H)))       # (la aproximación hess_inv de BFGS NO es confiable para esto)
-print("MLE manual:   beta =", opt.x.round(4), " SE aprox =", se_manual.round(4), " logLik =", round(-opt.fun, 2))
-m = sm.Logit(yv, sm.add_constant(x)).fit(disp=0)
-print("statsmodels:  beta =", m.params.round(4), " SE =", m.bse.round(4), " logLik =", round(m.llf, 2))
+lgd = np.clip(np.concatenate([rng.beta(0.6, 3, 140), rng.beta(4, 0.8, 60)]), 0, 1)    # 200 casos de LGD bimodal (ilustrativo)
+m, s, n = lgd.mean(), lgd.std(ddof=1), len(lgd)
+t_lo, t_hi = stats.t.interval(0.95, n - 1, loc=m, scale=s / np.sqrt(n))
+boot = np.array([rng.choice(lgd, n).mean() for _ in range(3000)])
+b_lo, b_hi = np.percentile(boot, [2.5, 97.5])
+print(f"LGD promedio = {m:.1%} | IC t: [{t_lo:.1%}, {t_hi:.1%}] | IC bootstrap: [{b_lo:.1%}, {b_hi:.1%}]")
+fig, ax = plt.subplots(1, 2, figsize=(13, 3.8))
+ax[0].hist(lgd, bins=25, color=AZUL); ax[0].set_title("Distribución de la LGD individual (bimodal)")
+ax[1].hist(boot, bins=40, color=ORO); ax[1].set_title("Distribución bootstrap de la LGD promedio (≈ normal)")
+plt.tight_layout(); plt.show()
 """),
 ("md", """
-## 5. Lectura de resultados estadísticos
-Estimemos un modelo con varias variables del *German Credit* (datos reales, 1 000 créditos, 30 % malos) y leamos la salida **como lo haría un comité de validación**.
-"""),
-("code", """
-g = german.copy()
-g["sin_cuenta_corriente"] = (g["status_of_existing_checking_account"] == "no checking account").astype(int)
-g["historia_critica"] = (g["credit_history"].str.contains("critical")).astype(int)
-g["ahorro_bajo"] = (g["savings_account_and_bonds"] == "... < 100 DM").astype(int)
-g["log_monto"] = np.log(g["credit_amount"])
-X = sm.add_constant(g[["duration_in_month", "log_monto", "age_in_years", "sin_cuenta_corriente", "historia_critica", "ahorro_bajo",
-                       "installment_rate_in_percentage_of_disposable_income"]])
-modelo = sm.Logit(g["default"], X).fit(disp=0)
-print(modelo.summary())
-"""),
-("code", """
-res = pd.DataFrame({"coef": modelo.params, "odds_ratio": np.exp(modelo.params), "p_value": modelo.pvalues,
-                    "OR_inf": np.exp(modelo.conf_int()[0]), "OR_sup": np.exp(modelo.conf_int()[1])})
-res.style.format({"coef": "{:+.3f}", "odds_ratio": "{:.3f}", "p_value": "{:.4f}", "OR_inf": "{:.3f}", "OR_sup": "{:.3f}"}).map(
-    lambda v: "color: #C8102E; font-weight: bold" if isinstance(v, float) and v < 0.05 else "", subset=["p_value"])
-"""),
-("md", """
-**Guía de lectura (para usar en clase):**
+**Lectura:** aunque cada LGD individual está lejos de la normal, la **media** sí se aproxima a ella: el TLC trabaja a nuestro favor. Por eso los intervalos t y bootstrap casi coinciden con 200 casos. Con 20 casos, no.
 
-| Elemento | Cómo leerlo |
-|---|---|
-| `coef` | Cambio en **log-odds** de incumplir por una unidad de $x$ |
-| `odds_ratio = e^coef` | Multiplicador de los *odds*: 1.5 significa +50 % en los odds de incumplir |
-| `std err` | Incertidumbre del coeficiente (viene de la curvatura de la log-verosimilitud) |
-| `z`, `P>|z|` | Test de Wald, H0: β = 0. Un p-valor bajo indica evidencia contra "no tiene efecto" |
-| `[0.025, 0.975]` | IC 95 % del coeficiente. Si contiene 0, no es significativo al 5 % |
-| `Log-Likelihood`, `LL-Null`, `LLR p-value` | Mejora del modelo frente a uno con solo constante (test de razón de verosimilitud) |
-| `Pseudo R-squ.` (McFadden) | $1 - \\ell_{modelo}/\\ell_{nulo}$. Valores entre 0.1 y 0.3 son habituales en riesgo: **no se compara con el R² de MCO** |
-
-> 🔎 **Caso para discutir:** en el *German Credit*, "sin cuenta corriente" e "historia crítica" **reducen** el riesgo estimado. ¿Error? Es un efecto conocido del dataset: la muestra viene de créditos **aprobados**, de modo que los clientes con historia "crítica" que pasaron la admisión fueron muy filtrados (**sesgo de selección / reject inference**). Un signo contraintuitivo debe investigarse antes de aceptarse.
-
-> ⚠️ **Significancia estadística ≠ relevancia de negocio ≠ causalidad.** Con 1 millón de registros casi todo es "significativo". Con 1 000, una variable relevante puede no serlo. Además: ¿el signo tiene sentido económico? ¿Es estable en el tiempo?
+## 5. Tamaño de muestra para estimar una PD
+Para un margen de error $E$ con confianza $1-\\alpha$: $\\; n = z_{1-\\alpha/2}^2 \\, p(1-p) / E^2$.
+"""),
+("code", """
+z = stats.norm.ppf(0.975)
+tabla = pd.DataFrame({E: {f"PD = {p:.0%}": int(np.ceil(z ** 2 * p * (1 - p) / E ** 2)) for p in [0.01, 0.02, 0.05, 0.08, 0.15]}
+                      for E in [0.0025, 0.005, 0.01, 0.02]})
+tabla.columns = [f"± {E * 100:.2g} pp" for E in tabla.columns]
+tabla.style.format("{:,.0f}").set_caption("Clientes necesarios para estimar la PD con el margen indicado (95 %)")
 """),
 ("md", """
+**Lectura:** estimar una PD de 2 % con ± 0,5 pp requiere unos 3 000 clientes; con ± 0,25 pp, más de 12 000. Esto explica por qué los segmentos pequeños se agrupan o se modelan con información compartida.
+
 ## 6. Ejercicios
-1. Calcula IC de Wilson y Jeffreys para la PD de cada `REGION_RATING_CLIENT`. ¿Se solapan?
-2. ¿Cuál es el tamaño mínimo de muestra para estimar una PD de 2 % con un margen de ±0.5 pp al 95 %?
-3. Agrega `age_in_years²` al modelo. ¿Mejora el log-likelihood? Haz el test de razón de verosimilitud a mano: $LR = 2(\\ell_1 - \\ell_0) \\sim \\chi^2_1$.
-4. **Reto:** deriva $\\hat p_{MLE} = k/n$ y la información de Fisher de la Bernoulli.
+1. Calcula la PD de cada `REGION_RATING_CLIENT` con sus IC de Wilson y Jeffreys. ¿Se solapan?
+2. Con el intervalo de Newcombe, ¿la PD de *Retail aliado* difiere significativamente de la de *Agencia*?
+3. Repite el ejercicio de la LGD con solo 20 casos. ¿Qué pasa con el intervalo t?
+4. ¿Cuántos clientes necesitas para estimar una PD de 8 % con ± 1 pp al 99 %?
 """),
 ]
 
-build(f"{M2}/notebooks/M02_S02_Estimacion_Intervalos_TLC_y_Verosimilitud.ipynb",
-      "Módulo 2 · Sesión 2: Estimadores, intervalos, teoremas límite y verosimilitud",
-      "Laboratorio: sesgo y varianza, IC de una PD, LGN, TLC, bootstrap, MLE y lectura de salidas estadísticas",
+build(f"{M2}/notebooks/M02_S02_Estimadores_Intervalos_y_Teoremas_Limite.ipynb",
+      "Módulo 2 · Sesión 2: Muestra, estimadores, intervalos y teoremas límite",
+      "Laboratorio: sesgo y varianza, shrinkage, IC para PD, diferencias y LGD, tamaño de muestra, LGN, TLC y bootstrap",
       cells)

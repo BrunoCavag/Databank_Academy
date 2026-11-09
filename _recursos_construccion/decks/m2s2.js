@@ -3,20 +3,18 @@ const J = require("../chart_data.json");
 const OUT = process.argv[2];
 
 (async () => {
-  const D = L.newDeck({ title: "M2 S2 - Estimación, intervalos y verosimilitud", footer: "DataBank Academy · Módulo 2 · Sesión 2 · Estimadores, intervalos, teoremas límite y verosimilitud" });
+  const D = L.newDeck({ title: "M2 S2 - Estimadores, intervalos y teoremas límite", footer: "DataBank Academy · Módulo 2 · Sesión 2 · Muestra, estimadores, intervalos y teoremas límite" });
   D.sec("Apertura");
-  L.sTitle(D, { kicker: "MÓDULO 2 · SESIÓN 2 DE 3", title: "Estimadores, intervalos, teoremas límite y verosimilitud",
+  L.sTitle(D, { kicker: "MÓDULO 2 · SESIÓN 2 DE 4", title: "Muestra, estimadores, intervalos y teoremas límite",
     subtitle: "Cuánto sabemos realmente de una PD estimada con datos", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
-    notes: "Ayer: la PD como probabilidad. Hoy: la PD como algo que estimamos con datos finitos, y por lo tanto con incertidumbre." });
+    notes: "Sesión 1: la PD como probabilidad. Hoy: la PD como algo que estimamos con datos finitos, y por lo tanto con incertidumbre." });
   L.sAgenda(D, { items: [
-    { t: "Población, muestra y estimadores", d: "Sesgo, varianza, error cuadrático medio y shrinkage", min: 15 },
+    { t: "Población, muestra y estimadores", d: "Sesgo, varianza, error cuadrático medio y shrinkage", min: 20 },
     { t: "Intervalos de confianza para una PD", d: "Wald, Wilson, Clopper-Pearson y Jeffreys", min: 20 },
-    { t: "Ley de los grandes números, TLC y bootstrap", d: "Por qué funcionan los intervalos y cómo medir la incertidumbre del AUC", min: 20 },
-    { t: "Verosimilitud y máxima verosimilitud", d: "De la PD constante a la regresión logística", min: 20 },
-    { t: "Lectura de resultados estadísticos", d: "Coeficientes, errores estándar, p-valores y pseudo R²", min: 10 },
-    { t: "Laboratorio", d: "Simulaciones, IC, bootstrap, MLE a mano y salida de statsmodels", min: 35, lab: true },
+    { t: "Distribuciones muestrales, LGN, TLC y bootstrap", d: "Por qué funcionan los intervalos y cómo medir la incertidumbre del AUC", min: 20 },
+    { t: "Más intervalos y tamaño de muestra", d: "Diferencia de PDs, LGD promedio y clientes necesarios", min: 20 },
+    { t: "Laboratorio", d: "Simulaciones, IC, bootstrap y tamaño de muestra", min: 40, lab: true },
   ] });
-
   L.sSection(D, { num: 1, title: "Población, muestra y estimadores", sub: "La tasa de default observada es un estimador, no la PD" });
   L.sCompare(D, { title: "Parámetro vs. estimador", left: { h: "Parámetro (población)", icon: "θ", items: ["La PD verdadera del segmento: p", "Fija pero desconocida", "Es lo que queremos para provisionar, fijar precios y calcular capital"] },
     right: { h: "Estimador (muestra)", icon: "θ̂", items: ["La tasa observada: p̂ = defaults / n", "Variable: cambia con cada muestra", "Tiene sesgo, varianza y una distribución muestral"] },
@@ -59,58 +57,34 @@ const OUT = process.argv[2];
     { h: "Percentiles", t: ["IC 95 %: percentiles 2,5 y 97,5 de la distribución bootstrap"] },
   ], note: "AUC del score de buró = 0,731 con IC 95 % bootstrap [0,724; 0,738]. Diferencias de AUC menores al ancho del IC no son concluyentes.", notes: "Muy útil en comparaciones champion–challenger de modelos (Módulo 7)." });
 
-  L.sSection(D, { num: 4, title: "Verosimilitud y máxima verosimilitud", sub: "El motor de estimación de la regresión logística" });
-  L.sFormula(D, { title: "La verosimilitud de una PD", formula: "ℒ(p) = Π p^(d_i) (1 − p)^(1 − d_i)     ℓ(p) = k·log p + (n − k)·log(1 − p)", fsize: 26,
-    where: [["ℒ(p)", "Probabilidad de observar exactamente nuestros datos si la PD fuera p"], ["ℓ(p)", "Log-verosimilitud: más fácil de derivar y numéricamente estable"], ["p̂_MLE", "dℓ/dp = 0  ⇒  p̂ = k / n"], ["I(p)", "Información de Fisher = n / (p(1 − p)) ⇒ SE(p̂) = √(p̂(1 − p̂)/n)"]],
-    example: { h: "Intuición", t: ["El MLE es el valor de p que hace 'menos sorprendentes' los datos", "La curvatura de ℓ en el máximo mide cuánto sabemos", "Más curvatura = menor error estándar"] } });
-  const ll = J.m2s2_ll;
-  L.sChart(D, { title: "Más datos: log-verosimilitud más 'puntiaguda'", chart: { type: "line", labels: ll.labels,
-      series: [{ name: "n = 50", values: ll["50"] }, { name: "n = 200", values: ll["200"] }, { name: "n = 1 000", values: ll["1000"] }],
-      opts: { showLegend: true, lineSize: 3, lineDataSymbol: "none", valAxisMinVal: -12, valAxisMaxVal: 0, chartColors: [L.HEX.slate, L.HEX.gold, L.HEX.navy], catAxisTitle: "Valor de p", showCatAxisTitle: true, valAxisTitle: "ℓ(p) − ℓ(p̂)", showValAxisTitle: true } },
-    points: ["Las tres curvas tienen su máximo en p̂ = 8 %", "Con n = 1 000, valores como 6 % o 10 % ya son muy poco verosímiles", "Los puntos donde ℓ cae 1,92 bajo el máximo definen el IC por razón de verosimilitud"] });
-  L.sFlow(D, { title: "De la PD constante a la regresión logística", steps: [
-    { h: "PD constante", t: ["p igual para todos", "MLE: p̂ = k/n"] },
-    { h: "PD que depende de x", t: ["p_i = 1 / (1 + e^−(β₀ + β₁x_i))", "Cada cliente tiene su PD"] },
-    { h: "Maximizar ℓ(β)", t: ["Σ [d_i η_i − log(1 + e^η_i)]", "No hay solución cerrada: optimización numérica"] },
-    { h: "Errores estándar", t: ["Hessiano: H = Xᵀ W X, W = diag(p(1 − p))", "SE = √diag(H⁻¹)"] },
-  ], note: "en el laboratorio estimamos la logística 'a mano' con un optimizador y obtenemos exactamente los coeficientes y errores de statsmodels. En el Módulo 3 derivamos Newton-Raphson.",
-    notes: "Advertencia práctica: el hess_inv que devuelve BFGS es una aproximación y no sirve para errores estándar; hay que usar el Hessiano analítico." });
-
-  L.sSection(D, { num: 5, title: "Lectura de resultados estadísticos", sub: "Cómo lee un comité de validación la salida de un modelo" });
-  L.sTable(D, { title: "German Credit: salida de una regresión logística", colW: [4.0, 1.5, 1.6, 1.5, 2.0], w: 10.6, rowH: 0.5, fsize: 14,
-    header: ["Variable", "Coef.", "Odds ratio", "p-valor", "IC 95 % OR"],
-    rows: [["Duración (meses)", "+0,034", "1,034", { text: "0,0001", options: { bold: true, color: L.HEX.crimson } }, "1,02 – 1,05"],
-      ["log(monto)", "+0,111", "1,117", "0,442", "0,84 – 1,48"],
-      ["Edad (años)", "−0,013", "0,987", "0,067", "0,97 – 1,00"],
-      ["Sin cuenta corriente", "−1,532", "0,216", { text: "< 0,0001", options: { bold: true, color: L.HEX.crimson } }, "0,15 – 0,31"],
-      ["Historia 'crítica'", "−0,765", "0,466", { text: "0,0001", options: { bold: true, color: L.HEX.crimson } }, "0,32 – 0,68"],
-      ["Ahorro < 100 DM", "+0,659", "1,933", { text: "0,0001", options: { bold: true, color: L.HEX.crimson } }, "1,40 – 2,68"],
-      ["Cuota / ingreso disponible", "+0,219", "1,245", { text: "0,006", options: { bold: true, color: L.HEX.crimson } }, "1,07 – 1,45"]],
-    note: "1 000 créditos reales, 30 % malos. Pseudo R² (McFadden) = 0,16; log-verosimilitud −511,8. Fuente: notebook M02_S02, sección 5.",
-    notes: "Leer una fila completa: cada mes adicional de plazo multiplica los odds de incumplir por 1,034 (+3,4 %). Un plazo 12 meses mayor: 1,034^12 ≈ 1,5 veces los odds." });
-  L.sCards(D, { title: "Cinco preguntas antes de aceptar un coeficiente", cols: 3, cards: [
-    { h: "¿Es significativo?", t: "p-valor e IC: ¿el intervalo excluye el cero (o el 1 en odds)?" },
-    { h: "¿Es relevante?", t: "Con millones de registros todo es significativo; mira la magnitud del efecto." },
-    { h: "¿Tiene sentido económico?", t: "En German Credit, 'historia crítica' reduce el riesgo: es un sesgo de selección de la muestra aprobada." },
-    { h: "¿Es estable?", t: "¿Se mantiene el signo y la magnitud en otras ventanas de tiempo y segmentos?" },
-    { h: "¿Es causal?", t: "Asociación no es causalidad: cuidado al usar el modelo para 'intervenir' (M6)." },
-    { h: "¿Qué dice el modelo global?", t: "LLR test frente al modelo nulo y pseudo R² entre 0,1 y 0,3, habitual en riesgo." },
-  ] });
-
+  L.sCards(D, { title: "Distribución muestral: la idea que conecta todo", cols: 3, cards: [
+    { h: "Qué es", t: "La distribución que tendría un estimador (PD, AUC, LGD media) si repitiéramos el muestreo muchas veces." },
+    { h: "Cómo se obtiene", t: "Por fórmula (TLC: normal con SE = √(p(1−p)/n)), por simulación o por bootstrap cuando no hay fórmula." },
+    { h: "Para qué sirve", t: "Intervalos de confianza, pruebas de hipótesis (sesión 4) y comparación de modelos champion–challenger." },
+  ], notes: "Mensaje: todo número que reportamos al comité tiene una distribución muestral detrás; ignorarla es confundir ruido con señal." });
+  L.sSection(D, { num: 4, title: "Más intervalos y tamaño de muestra", sub: "Diferencias de PDs, LGD y precisión requerida" });
+  L.sCompare(D, { title: "Intervalos para una diferencia y para una LGD", left: { h: "Diferencia de dos PDs", icon: "Δ", items: ["¿La PD digital es distinta de la de agencia?", "Newcombe: combina dos intervalos de Wilson", "Digital − agencia = +1,3 pp, IC 95 % [+0,8; +1,9]", "El intervalo excluye 0: diferencia significativa"] },
+    right: { h: "LGD promedio", icon: "L", items: ["Variable continua y bimodal (picos en 0 y 1)", "La media sí es aproximadamente normal (TLC)", "LGD = 36,4 %: IC t [31,6; 41,2] y bootstrap [31,7; 41,3]", "Con pocos casos, preferir bootstrap"] },
+    verdict: "elige el intervalo según el tipo de variable y el tamaño de muestra; con proporciones bajas evita Wald.",
+    notes: "Valores del notebook M02_S02, sección 4. La LGD bimodal es ilustrativa; en el Módulo 9 se trabaja con flujos de recuperación reales." });
+  L.sTable(D, { title: "¿Cuántos clientes hacen falta para estimar una PD?", colW: [2.4, 2.3, 2.3, 2.3, 2.3], w: 11.6, rowH: 0.62,
+    header: ["PD", "± 0,25 pp", "± 0,5 pp", "± 1 pp", "± 2 pp"],
+    rows: [["1 %", "6 085", "1 522", "381", "96"], ["2 %", "12 047", { text: "3 012", options: { bold: true, color: L.HEX.crimson } }, "753", "189"], ["5 %", "29 196", "7 299", "1 825", "457"], ["8 %", "45 238", "11 310", "2 828", "707"], ["15 %", "78 366", "19 592", "4 898", "1 225"]],
+    note: "n = z² · p(1 − p) / E², confianza 95 %. Fuente: notebook M02_S02, sección 5.",
+    notes: "Explica por qué los segmentos pequeños se agrupan, se encogen hacia la media o se modelan con información compartida." });
   D.sec("Laboratorio y cierre");
-  L.sLab(D, { notebook: "M02_S02_Estimacion_Intervalos_TLC_y_Verosimilitud.ipynb", data: ["hc_application_sintetico.csv", "german_credit.csv (UCI, real)"], steps: [
+  L.sLab(D, { notebook: "M02_S02_Estimadores_Intervalos_y_Teoremas_Limite.ipynb", data: ["hc_application_sintetico.csv", "german_credit.csv (UCI, real)"], steps: [
     { h: "Distribución muestral de la PD", t: "Sesgo y varianza según n; shrinkage" },
-    { h: "Intervalos de confianza", t: "Cuatro métodos y su cobertura real" },
+    { h: "Intervalos para una PD", t: "Cuatro métodos y su cobertura real" },
     { h: "LGN, TLC y bootstrap", t: "Simulaciones e IC del AUC" },
-    { h: "Verosimilitud", t: "Curvas de log-verosimilitud y MLE a mano con Hessiano" },
-    { h: "Lectura de resultados", t: "Logit en statsmodels: odds ratios, p-valores e IC" },
+    { h: "Más intervalos", t: "Diferencia de PDs (Newcombe) y LGD promedio" },
+    { h: "Tamaño de muestra", t: "Clientes necesarios según PD y precisión" },
   ] });
   L.sTakeaways(D, { items: [
     "La tasa de default observada es un estimador con sesgo y varianza; su incertidumbre cae con √n.",
     "Para PDs bajas o segmentos chicos usa Wilson o Jeffreys, no Wald.",
-    "El bootstrap da intervalos para cualquier métrica, incluidos AUC y Gini.",
-    "La regresión logística es máxima verosimilitud con una PD que depende de x; el Hessiano da los errores estándar.",
-    "Significancia, relevancia, sentido económico, estabilidad y causalidad son preguntas distintas.",
-  ], next: "pruebas de hipótesis, desbalance de clases y métricas de clasificación." });
+    "El TLC hace normal a la media aunque la variable no lo sea; el bootstrap da intervalos para cualquier métrica.",
+    "El tamaño de muestra define qué precisión es alcanzable: con 3 000 clientes, una PD de 2 % se estima a ± 0,5 pp.",
+  ], next: "verosimilitud, inferencia y lectura de resultados estadísticos." });
   await L.save(D, OUT);
 })();

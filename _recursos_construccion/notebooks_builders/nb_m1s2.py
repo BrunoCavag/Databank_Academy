@@ -11,18 +11,19 @@ cells = [
 2. Entender por qué la **mora contable engaña**: efecto denominador (crecimiento) y efecto castigos.
 3. Calcular **provisiones** con las categorías de la Res. SBS N.° 11356-2008 y el **costo de riesgo**.
 4. Leer **cosechas** (*vintages*) y **roll rates** como indicadores adelantados.
-5. Armar un **P&L simplificado por producto**: margen, pérdidas y contribución.
+5. Armar un **P&L simplificado por producto** y conectar **pérdida esperada, provisiones, capital, margen, precio y RAROC**.
 
 **Datos:** `cartera_panel_mensual.csv.gz`: panel **sintético** de 16 mil créditos minoristas (tarjeta, consumo, microempresa, vehicular, hipotecario), originados entre enero de 2022 y diciembre de 2025, y observados mes a mes hasta septiembre de 2026. Incluye atraso, castigos y recuperaciones. El riesgo responde a un índice macro ilustrativo (`macro_peru_ilustrativa.csv`).
 
 | Bloque | Tiempo | Contenido |
 |---|---|---|
-| 1 | 15 min | Estructura del panel crédito-mes |
-| 2 | 30 min | Indicadores de calidad de cartera y sus trampas |
-| 3 | 25 min | Provisiones SBS, cobertura y costo de riesgo |
-| 4 | 25 min | Cosechas y roll rates |
-| 5 | 15 min | Rentabilidad por producto |
-| 6 | 10 min | Ejercicios |
+| 1 | 10 min | Estructura del panel crédito-mes |
+| 2 | 25 min | Indicadores de originación y cartera, y sus trampas |
+| 3 | 20 min | Provisiones SBS, cobertura y costo de riesgo |
+| 4 | 20 min | Cosechas y roll rates |
+| 5 | 15 min | P&L por producto |
+| 6 | 20 min | Pérdida esperada, capital, precio mínimo y RAROC |
+| 7 | 10 min | Ejercicios |
 """),
 ("code", SETUP),
 ("md", "## 1. El panel crédito-mes"),
@@ -142,9 +143,9 @@ ax[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}"))
 plt.tight_layout(); plt.show()
 """),
 ("md", """
-**Puente hacia IFRS 9 (Módulo 7):** la provisión SBS es *incurrida/regulatoria* por categoría. IFRS 9 exige **pérdida crediticia esperada** con información prospectiva:
+**Puente hacia NIIF 9 (Módulo 9):** la provisión SBS es *incurrida/regulatoria* por categoría. NIIF 9 exige **pérdida crediticia esperada** con información prospectiva:
 $$ECL = \\sum_t PD_t \\times LGD_t \\times EAD_t \\times DF_t$$
-con *staging* (12 meses vs. vida del crédito). Hoy medimos lo que **ya pasó**; en el Módulo 7 mediremos lo que **esperamos que pase**.
+con *staging* (12 meses vs. vida del crédito). Hoy medimos lo que **ya pasó**; en el Módulo 9 mediremos lo que **esperamos que pase**.
 
 ## 4. Cosechas (*vintage analysis*)
 Una cosecha agrupa los créditos desembolsados en el mismo período y sigue su desempeño por **meses en libros (MOB)**. Permite comparar originaciones **a igual madurez**, sin el efecto denominador.
@@ -201,7 +202,7 @@ res["prob_acum_castigo"] = res.roll_forward[::-1].cumprod()[::-1]
 res.style.format("{:.1%}")
 """),
 ("md", """
-`prob_acum_castigo` en el tramo `0` aproxima la probabilidad de que un crédito al día llegue a castigo **si las tasas se mantienen** (es una cadena de Markov). Es el puente intuitivo hacia las matrices de transición y la PD de vida del Módulo 7.
+`prob_acum_castigo` en el tramo `0` aproxima la probabilidad de que un crédito al día llegue a castigo **si las tasas se mantienen** (es una cadena de Markov). Es el puente intuitivo hacia las matrices de transición y la PD de vida del Módulo 9.
 
 ## 6. Rentabilidad por producto: el P&L de riesgo
 Supuestos: costo de fondeo 5.5 % anual sobre saldo, costo operativo anual por producto (tarjeta 9 %, consumo 5 %, micro 8 %, vehicular 2.5 %, hipotecario 1.2 %). Los intereses se devengan sólo sobre créditos con 90 días de atraso o menos.
@@ -231,9 +232,80 @@ ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}")); ax.set
 ax.axhline(0, color="black", lw=.8); plt.xticks(rotation=0); plt.tight_layout(); plt.show()
 """),
 ("md", """
-**Mensaje clave:** el producto con **mayor mora** (tarjeta, micro) puede ser también el de **mayor contribución**, porque la tasa lo compensa. La pregunta correcta no es "¿cuánta mora tengo?", sino "¿mi precio paga la pérdida, el costo y el capital?" (Módulo 8, RAROC).
+## 7. Pérdida esperada, capital, margen, precio y RAROC
+La rentabilidad contable del punto anterior ignora el **capital**. Un producto de alto margen y alta volatilidad puede destruir valor si consume mucho capital. Conectamos los componentes:
 
-## 7. Ejercicios
+$$EL = PD \\times LGD \\times EAD \\qquad K_{IRB} = LGD \\cdot \\left[\\Phi\\!\\left(\\frac{\\Phi^{-1}(PD) + \\sqrt{\\rho}\\,\\Phi^{-1}(0{,}999)}{\\sqrt{1-\\rho}}\\right) - PD\\right]$$
+
+$$RAROC = \\frac{(\\text{Ingreso} - \\text{Fondeo} - \\text{Costo operativo} - EL)\\,(1 - t)}{\\text{Capital económico}}$$
+
+- **PD a 12 meses (through-the-cycle):** % de créditos al día que llegan a 90+ días o castigo en los 12 meses siguientes, promediado sobre 6 fechas de inicio. Con una sola fecha benigna (2025) el riesgo y el capital quedarían subestimados.
+- **LGD:** 1 − tasa de recupero post-castigo (aproximación del Módulo 1; la versión completa está en el Módulo 9).
+- **Capital:** fórmula IRB de Basilea para minorista. ρ = 4 % para revolvente, 15 % para hipotecario y la fórmula de "otros minoristas" (entre 3 % y 16 % según la PD) para el resto. Lo usamos como medida de **capital económico** ilustrativa.
+"""),
+("code", """
+from scipy.stats import norm
+# PD a 12 meses "through-the-cycle": promedio de 6 fechas de inicio (incluye los años de estrés 2023-2024)
+pds = []
+for t0 in ["2022-12", "2023-06", "2023-12", "2024-06", "2024-12", "2025-06"]:
+    b0 = p[(p.periodo == t0) & (p.estado == "Vigente") & (p.dias_atraso == 0)]
+    t1 = str(pd.Period(t0, "M") + 12)
+    f = p[(p.periodo > t0) & (p.periodo <= t1)]
+    m = set(f.loc[(f.dias_atraso > 90) | (f.monto_castigo > 0), "id_credito"])
+    pds.append(b0.assign(d=b0.id_credito.isin(m)).groupby("producto").d.mean().rename(t0))
+pd_tabla = pd.concat(pds, axis=1)
+display(pd_tabla.style.format("{:.2%}").set_caption("PD a 12 meses por fecha de inicio: el ciclo importa"))
+pd12 = pd_tabla.mean(axis=1)
+base_t = p[(p.periodo == "2025-06") & (p.estado == "Vigente")][["id_credito", "producto", "tasa_anual"]]
+
+c2 = p[(p.monto_castigo > 0) & (p.periodo <= "2025-09")][["id_credito", "producto", "monto_castigo"]]
+c2["rec"] = c2.id_credito.map(p.groupby("id_credito").recupero.sum())
+lgd = 1 - c2.groupby("producto").rec.sum() / c2.groupby("producto").monto_castigo.sum()
+
+def rho(prod, pd_):
+    if prod == "Tarjeta de crédito": return 0.04
+    if prod == "Hipotecario": return 0.15
+    w = (1 - np.exp(-35 * pd_)) / (1 - np.exp(-35))
+    return 0.03 * w + 0.16 * (1 - w)                          # "otros minoristas" (Basilea)
+def k_irb(pd_, lgd_, r):
+    return lgd_ * (norm.cdf((norm.ppf(pd_) + np.sqrt(r) * norm.ppf(0.999)) / np.sqrt(1 - r)) - pd_)
+
+# Costos operativos "completos": originación, adquisición, beneficios, mantenimiento y cobranza
+opex = {"Tarjeta de crédito": .20, "Consumo no revolvente": .09, "Microempresa": .14, "Vehicular": .03, "Hipotecario": .015}
+IMPUESTO = 0.295                                              # impuesto a la renta en el Perú
+tasa = base_t.groupby("producto").tasa_anual.mean()
+r = pd.DataFrame({"PD_12m": pd12, "LGD": lgd, "tasa": tasa})
+r["rho"] = [rho(k, v) for k, v in r.PD_12m.items()]
+r["EL_%"] = r.PD_12m * r.LGD
+r["K_%"] = [k_irb(a, b, c) for a, b, c in zip(r.PD_12m, r.LGD, r.rho)]
+FONDEO, COSTO_CAPITAL = 0.055, 0.15
+r["opex_%"] = r.index.map(opex)
+r["margen_ajustado_%"] = r.tasa - FONDEO - r["opex_%"] - r["EL_%"]
+r["RAROC"] = r["margen_ajustado_%"] * (1 - IMPUESTO) / r["K_%"]
+# Precio mínimo: tasa que iguala el RAROC después de impuestos al costo de capital
+r["tasa_minima"] = FONDEO + r["opex_%"] + r["EL_%"] + COSTO_CAPITAL * r["K_%"] / (1 - IMPUESTO)
+r.style.format({"PD_12m": "{:.2%}", "LGD": "{:.1%}", "tasa": "{:.1%}", "rho": "{:.3f}", "EL_%": "{:.2%}", "K_%": "{:.2%}",
+                "opex_%": "{:.1%}", "margen_ajustado_%": "{:.1%}", "RAROC": "{:.0%}", "tasa_minima": "{:.1%}"})
+"""),
+("code", """
+fig, ax = plt.subplots(figsize=(11, 4.5))
+x = np.arange(len(r)); w = 0.38
+ax.bar(x - w/2, r.tasa, w, color=AZUL, label="Tasa promedio cobrada")
+ax.bar(x + w/2, r.tasa_minima, w, color=ORO, label="Tasa mínima (RAROC = costo de capital 15 %)")
+ax.set_xticks(x); ax.set_xticklabels(r.index, rotation=0, fontsize=9)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}")); ax.legend(); ax.set_title("¿El precio cubre fondeo, costos, pérdida esperada y capital?")
+plt.tight_layout(); plt.show()
+"""),
+("md", """
+**Mensajes clave:**
+- La **pérdida esperada** se cubre con **provisiones** y debe estar dentro del **precio**.
+- La **pérdida inesperada** se cubre con **capital**, y el capital tiene un costo que también debe pagar el precio.
+- El **RAROC** permite comparar productos con perfiles de riesgo distintos sobre la misma base. Un producto con RAROC menor al costo de capital destruye valor aunque su contribución contable sea positiva.
+- Desarrollaremos pricing y RAROC en profundidad en el **Módulo 10**.
+
+**Mensaje clave:** el producto con **mayor mora** (tarjeta, micro) puede ser también el de **mayor contribución**, porque la tasa lo compensa. La pregunta correcta no es "¿cuánta mora tengo?", sino "¿mi precio paga la pérdida, el costo y el capital?" (Módulo 10, RAROC).
+
+## 8. Ejercicios
 1. Recalcula los indicadores para **Microempresa**. ¿La mora ajustada se comporta igual que en consumo?
 2. Construye la curva de cosechas con el indicador **ever 30+ a MOB 6** (*30@6*), muy usado en originación.
 3. Estima el impacto en provisiones de que 10 % del saldo *Normal* migre a *CPP*.

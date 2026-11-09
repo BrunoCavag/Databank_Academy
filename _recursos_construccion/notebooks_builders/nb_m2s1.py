@@ -102,7 +102,7 @@ ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0%}")); ax.yax
 ax.set_title("El mismo indicador vale distinto según la PD base"); plt.show()
 """),
 ("md", """
-**Lectura:** en segmentos de PD baja (p. ej., hipotecario), incluso una buena alerta genera **muchos falsos positivos**. Esto explica por qué las reglas de cobranza preventiva se calibran por segmento. *(Volveremos a Bayes en el Módulo 10.)*
+**Lectura:** en segmentos de PD baja (p. ej., hipotecario), incluso una buena alerta genera **muchos falsos positivos**. Esto explica por qué las reglas de cobranza preventiva se calibran por segmento. *(Volveremos a Bayes en el Módulo 6.)*
 
 ## 3. Esperanza, varianza y pérdida esperada
 La pérdida de un crédito es $L_i = D_i \\times LGD_i \\times EAD_i$. Si LGD y EAD son conocidas (o independientes de $D_i$):
@@ -165,7 +165,7 @@ tabla.style.format("{:,.2f}")
 2. La **cola** (VaR 99.9 %) crece mucho con la correlación → se cubre con **capital** (pérdida inesperada).
 3. Por eso la diversificación **idiosincrática** funciona (muchos clientes pequeños), pero la **sistémica** no se diversifica: el ciclo afecta a todos a la vez.
 
-Estas ideas reaparecen en: provisiones con escenarios (Módulo 7), capital económico y RAROC (Módulo 8) y *stress testing* (Módulo 9).
+Estas ideas reaparecen en: provisiones con escenarios (Módulo 9), capital económico y RAROC (Módulo 10) y *stress testing* (Módulo 11).
 """),
 ("code", """
 # Fórmula cerrada de Vasicek: PD condicional al factor en el percentil 99.9 %

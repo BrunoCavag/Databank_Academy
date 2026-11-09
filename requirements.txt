@@ -1,8 +1,12 @@
 pandas>=2.1
 numpy
 scipy
-scikit-learn
+scikit-learn>=1.5
 statsmodels
 matplotlib
 jinja2
 openpyxl
+optbinning>=0.19
+fastwoe>=0.3
+xgboost>=3.1
+catboost>=1.2.6

@@ -154,7 +154,24 @@ app = pd.DataFrame({
     "EXT_SOURCE_2": np.round(ext2, 6),
     "EXT_SOURCE_3": np.round(ext3, 6),
 })
-# duplicados intencionales (para auditoría de datos en Módulo 7)
+# --- Categóricas de alta cardinalidad con efecto real (para Módulos 3-5: WoE, target encoding, CatBoost).
+# Generador separado (semilla 7) para NO alterar ninguna columna anterior. Cada nivel tiene un efecto latente
+# sobre el riesgo; la asignación de clientes a niveles depende de ese efecto y del resultado (y - p), de modo que
+# la categoría aporta información adicional a las demás variables, como ocurre con agencias y empleadores reales.
+rng_cat = np.random.default_rng(7)
+def asignar(n_niveles, zipf_a, sd_efecto, fuerza, prefijo):
+    frec = 1 / np.arange(1, n_niveles + 1) ** zipf_a
+    frec = rng_cat.permutation(frec / frec.sum())
+    efecto = rng_cat.normal(0, sd_efecto, n_niveles)
+    res = (target - pd_true)                       # señal no explicada por el resto de variables
+    logits = np.log(frec)[None, :] + fuerza * res[:, None] * efecto[None, :]
+    g = rng_cat.gumbel(size=(N, n_niveles))
+    idx = np.argmax(logits + g, axis=1)
+    return np.array([f"{prefijo}{k:04d}" for k in idx])
+app["AGENCIA_ID"] = asignar(180, 0.6, 1.0, 0.45, "AG")                 # 180 agencias, efecto moderado
+app["EMPLEADOR_ID"] = np.concatenate([asignar(3000, 0.85, 1.2, 0.6, "EMP")[:N]])   # alta cardinalidad, colas largas
+app["COMERCIO_ALIADO"] = np.where(app.CANAL == "Retail aliado", asignar(40, 0.8, 0.9, 0.8, "RET"), "NO_APLICA")
+# duplicados intencionales (para auditoría de datos en Módulo 8)
 dups = app.sample(60, random_state=1)
 app = pd.concat([app, dups]).sample(frac=1, random_state=2).reset_index(drop=True)
 app.to_csv(f"{OUT}/hc_application_sintetico.csv", index=False)

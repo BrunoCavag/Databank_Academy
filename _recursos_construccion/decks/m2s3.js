@@ -3,102 +3,96 @@ const J = require("../chart_data.json");
 const OUT = process.argv[2];
 
 (async () => {
-  const D = L.newDeck({ title: "M2 S3 - Pruebas de hipótesis, desbalance y métricas", footer: "DataBank Academy · Módulo 2 · Sesión 3 · Pruebas de hipótesis, desbalance de clases y métricas" });
+  const D = L.newDeck({ title: "M2 S3 - Verosimilitud e inferencia", footer: "DataBank Academy · Módulo 2 · Sesión 3 · Verosimilitud, inferencia y lectura de resultados" });
   D.sec("Apertura");
-  L.sTitle(D, { kicker: "MÓDULO 2 · SESIÓN 3 DE 3", title: "Pruebas de hipótesis, desbalance de clases y métricas de clasificación",
-    subtitle: "¿El modelo está bien calibrado? ¿Discrimina? ¿Con qué corte decidimos?", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027" });
+  L.sTitle(D, { kicker: "MÓDULO 2 · SESIÓN 3 DE 4", title: "Verosimilitud, inferencia y lectura de resultados estadísticos",
+    subtitle: "El motor de estimación de los modelos de PD", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
+    notes: "Esta sesión es el puente directo hacia la regresión logística del Módulo 3." });
   L.sAgenda(D, { items: [
-    { t: "La lógica de una prueba de hipótesis", d: "H0, H1, p-valor, errores tipo I y II, potencia y tamaño de muestra", min: 25 },
-    { t: "Tests para validar modelos de PD", d: "Binomial, Jeffreys, Hosmer-Lemeshow, χ² y Kolmogorov-Smirnov", min: 25 },
-    { t: "Desbalance de clases", d: "La paradoja de la exactitud y el costo de balancear", min: 15 },
-    { t: "Métricas y punto de corte", d: "ROC, Gini, KS, PR-AUC, Brier y corte por costos", min: 20 },
-    { t: "Laboratorio", d: "Taiwan Default (UCI) y solicitudes tipo Home Credit", min: 35, lab: true },
+    { t: "Verosimilitud y máxima verosimilitud", d: "De la PD constante a la regresión logística; Fisher y Hessiano", min: 25 },
+    { t: "Lectura de resultados estadísticos", d: "Coeficientes, errores estándar, odds ratios, p-valores", min: 15 },
+    { t: "Inferencia: Wald, razón de verosimilitud y score", d: "Modelos anidados e intervalos perfilados", min: 20 },
+    { t: "Comparación de modelos", d: "Deviance, AIC y BIC", min: 15 },
+    { t: "Laboratorio", d: "MLE a mano, tests y selección por AIC/BIC sobre German Credit", min: 45, lab: true },
+  ] });
+  L.sSection(D, { num: 1, title: "Verosimilitud y máxima verosimilitud", sub: "El motor de estimación de la regresión logística" });
+  L.sFormula(D, { title: "La verosimilitud de una PD", formula: "ℒ(p) = Π p^(d_i) (1 − p)^(1 − d_i)     ℓ(p) = k·log p + (n − k)·log(1 − p)", fsize: 26,
+    where: [["ℒ(p)", "Probabilidad de observar exactamente nuestros datos si la PD fuera p"], ["ℓ(p)", "Log-verosimilitud: más fácil de derivar y numéricamente estable"], ["p̂_MLE", "dℓ/dp = 0  ⇒  p̂ = k / n"], ["I(p)", "Información de Fisher = n / (p(1 − p)) ⇒ SE(p̂) = √(p̂(1 − p̂)/n)"]],
+    example: { h: "Intuición", t: ["El MLE es el valor de p que hace 'menos sorprendentes' los datos", "La curvatura de ℓ en el máximo mide cuánto sabemos", "Más curvatura = menor error estándar"] } });
+  const ll = J.m2s2_ll;
+  L.sChart(D, { title: "Más datos: log-verosimilitud más 'puntiaguda'", chart: { type: "line", labels: ll.labels,
+      series: [{ name: "n = 50", values: ll["50"] }, { name: "n = 200", values: ll["200"] }, { name: "n = 1 000", values: ll["1000"] }],
+      opts: { showLegend: true, lineSize: 3, lineDataSymbol: "none", valAxisMinVal: -12, valAxisMaxVal: 0, chartColors: [L.HEX.slate, L.HEX.gold, L.HEX.navy], catAxisTitle: "Valor de p", showCatAxisTitle: true, valAxisTitle: "ℓ(p) − ℓ(p̂)", showValAxisTitle: true } },
+    points: ["Las tres curvas tienen su máximo en p̂ = 8 %", "Con n = 1 000, valores como 6 % o 10 % ya son muy poco verosímiles", "Los puntos donde ℓ cae 1,92 bajo el máximo definen el IC por razón de verosimilitud"] });
+  L.sFlow(D, { title: "De la PD constante a la regresión logística", steps: [
+    { h: "PD constante", t: ["p igual para todos", "MLE: p̂ = k/n"] },
+    { h: "PD que depende de x", t: ["p_i = 1 / (1 + e^−(β₀ + β₁x_i))", "Cada cliente tiene su PD"] },
+    { h: "Maximizar ℓ(β)", t: ["Σ [d_i η_i − log(1 + e^η_i)]", "No hay solución cerrada: optimización numérica"] },
+    { h: "Errores estándar", t: ["Hessiano: H = Xᵀ W X, W = diag(p(1 − p))", "SE = √diag(H⁻¹)"] },
+  ], note: "en el laboratorio estimamos la logística 'a mano' con un optimizador y obtenemos exactamente los coeficientes y errores de statsmodels. En el Módulo 3 derivamos Newton-Raphson.",
+    notes: "Advertencia práctica: el hess_inv que devuelve BFGS es una aproximación y no sirve para errores estándar; hay que usar el Hessiano analítico." });
+
+  L.sFormula(D, { title: "Información de Fisher y Hessiano de la logística", formula: "∇ℓ(β) = Xᵀ(y − p)        H(β) = −Xᵀ W X,   W = diag(pᵢ(1 − pᵢ))", fsize: 24,
+    where: [["∇ℓ(β)", "Gradiente (score): se anula en el MLE"], ["H(β)", "Hessiano: curvatura de la log-verosimilitud, siempre negativo definido"], ["I(β) = −E[H]", "Información de Fisher: cuánta información aportan los datos sobre β"], ["Var(β̂) ≈ I(β̂)⁻¹", "Errores estándar = raíz de la diagonal de (XᵀWX)⁻¹"]],
+    example: { h: "Por qué importa", t: ["Clientes con p cercana a 0 o 1 aportan poca información (pᵢ(1 − pᵢ) pequeño)", "Por eso los eventos raros dan errores estándar grandes", "El paso de Newton-Raphson usa exactamente ∇ℓ y H (Módulo 3)", "El hess_inv de BFGS no sirve para errores estándar"] },
+    notes: "En el laboratorio se calcula XᵀWX a mano y se reproducen exactamente los errores estándar de statsmodels." });
+  L.sSection(D, { num: 2, title: "Lectura de resultados estadísticos", sub: "Cómo lee un comité de validación la salida de un modelo" });
+  L.sTable(D, { title: "German Credit: salida de una regresión logística", colW: [4.0, 1.5, 1.6, 1.5, 2.0], w: 10.6, rowH: 0.5, fsize: 14,
+    header: ["Variable", "Coef.", "Odds ratio", "p-valor", "IC 95 % OR"],
+    rows: [["Duración (meses)", "+0,034", "1,034", { text: "0,0001", options: { bold: true, color: L.HEX.crimson } }, "1,02 – 1,05"],
+      ["log(monto)", "+0,111", "1,117", "0,442", "0,84 – 1,48"],
+      ["Edad (años)", "−0,013", "0,987", "0,067", "0,97 – 1,00"],
+      ["Sin cuenta corriente", "−1,532", "0,216", { text: "< 0,0001", options: { bold: true, color: L.HEX.crimson } }, "0,15 – 0,31"],
+      ["Historia 'crítica'", "−0,765", "0,466", { text: "0,0001", options: { bold: true, color: L.HEX.crimson } }, "0,32 – 0,68"],
+      ["Ahorro < 100 DM", "+0,659", "1,933", { text: "0,0001", options: { bold: true, color: L.HEX.crimson } }, "1,40 – 2,68"],
+      ["Cuota / ingreso disponible", "+0,219", "1,245", { text: "0,006", options: { bold: true, color: L.HEX.crimson } }, "1,07 – 1,45"]],
+    note: "1 000 créditos reales, 30 % malos. Pseudo R² (McFadden) = 0,16; log-verosimilitud −511,8. Fuente: notebook M02_S02, sección 5.",
+    notes: "Leer una fila completa: cada mes adicional de plazo multiplica los odds de incumplir por 1,034 (+3,4 %). Un plazo 12 meses mayor: 1,034^12 ≈ 1,5 veces los odds." });
+  L.sCards(D, { title: "Seis preguntas antes de aceptar un coeficiente", cols: 3, cards: [
+    { h: "¿Es significativo?", t: "p-valor e IC: ¿el intervalo excluye el cero (o el 1 en odds)?" },
+    { h: "¿Es relevante?", t: "Con millones de registros todo es significativo; mira la magnitud del efecto." },
+    { h: "¿Tiene sentido económico?", t: "En German Credit, 'historia crítica' reduce el riesgo: es un sesgo de selección de la muestra aprobada." },
+    { h: "¿Es estable?", t: "¿Se mantiene el signo y la magnitud en otras ventanas de tiempo y segmentos?" },
+    { h: "¿Es causal?", t: "Asociación no es causalidad: cuidado al usar el modelo para 'intervenir' (M7)." },
+    { h: "¿Qué dice el modelo global?", t: "LLR test frente al modelo nulo y pseudo R² entre 0,1 y 0,3, habitual en riesgo." },
   ] });
 
-  L.sSection(D, { num: 1, title: "La lógica de una prueba de hipótesis", sub: "Decidir con datos sabiendo que nos podemos equivocar" });
-  L.sTable(D, { title: "Dos formas de equivocarse", colW: [3.0, 4.2, 4.2], w: 11.4, rowH: 1.0, fsize: 16,
-    header: ["", "H0 es verdadera (el modelo está bien)", "H0 es falsa (el modelo subestima)"],
-    rows: [["No rechazo H0", { text: "Correcto (1 − α)", options: { fill: { color: "D8F0E3" }, align: "center", bold: false } }, { text: "Error tipo II (β): no detectamos un modelo malo", options: { fill: { color: "F8D7DA" }, align: "center", bold: false } }],
-      ["Rechazo H0", { text: "Error tipo I (α): recalibramos un modelo bueno", options: { fill: { color: "FFF4D6" }, align: "center", bold: false } }, { text: "Correcto: potencia (1 − β)", options: { fill: { color: "D8F0E3" }, align: "center", bold: false } }]],
-    note: "En validación de PD, el error tipo II suele ser el más costoso: provisiones y capital insuficientes.",
-    notes: "Analogía con un juicio: H0 es la inocencia. α es condenar a un inocente; β, absolver a un culpable." });
-  L.sFormula(D, { title: "Ejemplo: ¿la PD del grado A está subestimada?", formula: "H0: PD = 2 %    vs.    H1: PD > 2 %      (31 defaults en 1 000 clientes)", fsize: 26,
-    where: [["Estadístico", "Número de defaults observados: k = 31 (3,1 %)"], ["Distribución bajo H0", "Binomial(1 000; 0,02): E[k] = 20"], ["p-valor", "P(k ≥ 31 | H0) = 0,013"], ["Región de rechazo", "k ≥ 29 al 5 % (una cola)"]],
-    example: { h: "Decisión", t: ["p = 0,013 < 0,05: se rechaza H0", "La PD del grado A parece subestimada", "Siguiente paso: ¿es material? ¿Es persistente en varios años?"] } });
-  const pt = J.m2s3_pot; const keys = Object.keys(pt).filter(k => k !== "labels");
-  L.sChart(D, { title: "Potencia: ¿el test es capaz de detectar el problema?", chart: { type: "line", labels: pt.labels,
-      series: keys.map(k => ({ name: "PD real = " + k.replace("%", " %"), values: pt[k] })),
-      opts: { showLegend: true, valAxisLabelFormatCode: "0%", lineSize: 3, lineDataSymbol: "circle", lineDataSymbolSize: 7, valAxisMaxVal: 1, chartColors: [L.HEX.slate, L.HEX.navy, L.HEX.crimson], catAxisTitle: "Clientes en el grado (n)", showCatAxisTitle: true, valAxisTitle: "Potencia (H0: PD = 2 %, α = 5 %)", showValAxisTitle: true } },
-    points: ["Detectar 2 % → 3 % con 80 % de potencia requiere ≈ 1 400 clientes", "Detectar 2 % → 2,5 % requiere ≈ 5 200", "'No rechazar' en un grado chico no prueba que el modelo esté bien"],
-    source: "Test binomial exacto, una cola. Notebook M02_S03, sección 1.",
-    notes: "Vínculo con el Módulo 1: el champion–challenger con p = 0,24 no probaba que ambas políticas fueran iguales." });
-
-  L.sSection(D, { num: 2, title: "Tests para validar modelos de PD", sub: "Calibración y discriminación" });
-  const cl = J.m2s3_calib;
-  L.sChart(D, { title: "Backtesting por grado: PD predicha vs. tasa observada", chart: { type: "bar", labels: cl.labels.map(x => "Grado " + x),
-      series: [{ name: "PD media predicha", values: cl.pred }, { name: "Tasa observada", values: cl.obs }],
-      opts: { barGrouping: "clustered", showLegend: true, valAxisLabelFormatCode: "0%", chartColors: [L.HEX.slate, L.HEX.crimson], showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: "0%" } },
-    points: ["Grados A y B: el modelo subestima (tests binomial y Jeffreys rechazan)", "Grados C-E: sobreestima", "Causa: PAY_0 (meses de atraso) tratado como lineal: motiva el WoE del Módulo 3"],
-    source: "Taiwan Default of Credit Card Clients (UCI), muestra de prueba (30 %). Notebook M02_S03, sección 2.",
-    notes: "Jeffreys: P(PD_real ≤ PD_modelo | datos) con posterior Beta(k + ½, n − k + ½). Valores bajos indican subestimación." });
-  L.sFormula(D, { title: "Jeffreys y Hosmer-Lemeshow", formula: "Jeffreys: P(PD ≤ PD_modelo | k, n) = F_Beta(k+½, n−k+½)(PD_modelo)\nHL = Σ_g (O_g − E_g)² / [E_g (1 − E_g / n_g)] ~ χ²(G − 2)", fsize: 22,
-    where: [["k, n", "Defaults observados y clientes del grado"], ["Beta(k+½, n−k+½)", "Posterior de la PD con prior no informativo de Jeffreys"], ["O_g, E_g", "Defaults observados y esperados (Σ PD) en el grupo g"], ["G", "Número de grupos (típicamente 10 deciles)"]],
-    example: { h: "Cómo se usan", t: ["Jeffreys < 5 %: la PD del grado está subestimada (semáforo rojo)", "Recomendado por el BCE para backtesting de PD", "HL evalúa la calibración de todos los grupos a la vez", "HL en Taiwán = 74,9: se rechaza; falta calibrar"] },
-    notes: "Jeffreys funciona bien incluso con pocos defaults, por eso es preferido en carteras de bajo incumplimiento." });
-  L.sTable(D, { title: "La caja de herramientas de validación", colW: [2.6, 3.2, 3.1, 3.23], rowH: 0.78,
-    header: ["Test", "Pregunta", "H0", "Comentario"],
-    rows: [["Binomial / Jeffreys", "¿La PD de un grado está bien calibrada?", "PD real = PD del modelo", "Por grado; una cola (subestimación)"],
-      ["Hosmer-Lemeshow", "¿La calibración global es adecuada?", "O_g = E_g en todos los grupos", "HL = 74,9 (p ≈ 0): con n grande rechaza casi siempre"],
-      ["χ² de independencia", "¿Una variable se asocia con el default?", "Independencia", "Complementar con V de Cramér (magnitud)"],
-      ["Kolmogorov-Smirnov", "¿El score separa buenos de malos?", "Misma distribución", "KS = 0,39 en Taiwán; estándar en LatAm"]],
-    note: "Significancia ≠ materialidad: con 30 mil observaciones, EDUCATION tiene p ≈ 10⁻³² pero V de Cramér = 0,07 (asociación débil).",
-    notes: "En validación se combinan tests estadísticos, umbrales de materialidad (semáforos) y juicio experto." });
-
-  L.sSection(D, { num: 3, title: "Desbalance de clases", sub: "Cuando los malos son minoría" });
-  L.sStats(D, { title: "La paradoja de la exactitud", stats: [
-    { v: "8 %", l: "de malos en las solicitudes", color: L.HEX.navy },
-    { v: "92 %", l: "de exactitud de un 'modelo' que dice que nadie incumple", color: L.HEX.crimson },
-    { v: "0", l: "malos detectados por ese modelo", color: L.HEX.gold },
-  ], points: ["La exactitud (accuracy) no sirve en problemas desbalanceados", "Necesitamos métricas de ordenamiento (AUC, KS) y de calibración (Brier, log-loss)", "Y una decisión explícita de corte según costos"] });
-  L.sTable(D, { title: "Balancear clases no mejora el ranking y descalibra la PD", colW: [4.0, 1.8, 2.4, 1.8, 2.13], rowH: 0.6,
-    header: ["Estrategia", "AUC", "PD media predicha", "Tasa real", "Brier"],
-    rows: [["Base (sin balancear)", "0,744", { text: "7,9 %", options: { color: L.HEX.green, bold: true } }, "8,0 %", "0,068"],
-      ["class_weight = 'balanced'", "0,744", { text: "42,4 %", options: { color: L.HEX.crimson, bold: true } }, "8,0 %", "0,204"],
-      ["Undersampling 50/50", "0,744", { text: "42,5 %", options: { color: L.HEX.crimson, bold: true } }, "8,0 %", "0,204"],
-      ["Undersampling + corrección de prior", "0,744", { text: "7,8 %", options: { color: L.HEX.green, bold: true } }, "8,0 %", "0,068"]],
-    note: "Corrección de prior (King & Zeng): logit_corregido = logit − log[(π_muestra/(1−π_muestra)) / (π_pob/(1−π_pob))]. Fuente: notebook M02_S03, sección 3.",
-    notes: "En riesgo, la PD se usa como probabilidad (provisiones, precio, capital). Si balanceas para entrenar, recalibra antes de usar." });
-
-  L.sSection(D, { num: 4, title: "Métricas y punto de corte", sub: "Ordenar bien, calibrar bien y decidir bien" });
-  const rc = J.m2s3_roc;
-  L.sChart(D, { title: "Curva ROC: capacidad de ordenamiento", chart: { type: "line", labels: rc.labels,
-      series: [{ name: "Modelo", values: rc.tpr }, { name: "Azar", values: rc.rand }],
-      opts: { showLegend: true, lineSize: 3, lineDataSymbol: "none", valAxisLabelFormatCode: "0%", valAxisMaxVal: 1, chartColors: [L.HEX.navy, L.HEX.slate], catAxisTitle: "Tasa de falsos positivos (buenos rechazados)", showCatAxisTitle: true, valAxisTitle: "Tasa de verdaderos positivos (malos detectados)", showValAxisTitle: true } },
-    kpi: { v: `Gini ${(2 * rc.auc - 1).toFixed(2).replace(".", ",")}`, l: `AUC = ${String(rc.auc).replace(".", ",")} · Taiwan, logística simple` },
-    points: ["AUC: probabilidad de que un malo tenga más PD que un bueno", "Gini = 2·AUC − 1, el estándar de la industria", "No mide calibración: una PD × 5 tiene el mismo AUC"] });
-  L.sTable(D, { title: "¿Qué métrica para qué pregunta?", colW: [2.6, 3.4, 6.13], rowH: 0.68,
-    header: ["Métrica", "Mide", "Comentario en riesgo de crédito"],
-    rows: [["AUC / Gini", "Ordenamiento", "Estándar; Gini > 0,5 suele ser bueno en originación minorista"], ["KS", "Máxima separación", "Muy usado en LatAm; ligado al punto de corte"], ["PR-AUC", "Desempeño en la clase minoritaria", "Más informativo cuando la tasa de malos es muy baja"],
-      ["Brier / log-loss", "Calibración + discriminación", "Indispensables si la PD se usa como probabilidad"], ["Precisión / recall / F1", "Desempeño en un corte", "Útiles para la política, no para comparar modelos"]] });
-  L.sFormula(D, { title: "El punto de corte depende de los costos, no de 0,5", formula: "p* = C_FP / (C_FP + C_FN)", fsize: 34,
-    where: [["C_FN", "Costo de aprobar a un malo: LGD × EAD ≈ 0,75 × 0,80 = 60 % del monto"], ["C_FP", "Costo de rechazar a un bueno: margen perdido ≈ 0,55 × 15 % = 8,25 %"], ["p*", "Rechazar si PD ≥ p*: aquí p* ≈ 12 %"], ["Supuesto", "La PD debe estar calibrada"]],
-    example: { h: "Resultado en el caso", t: ["Corte teórico 12,1 %; empírico 11,4 %", "Se rechaza al 21 % de los solicitantes", "Se detecta el 51 % de los malos", "Precisión de los rechazos: 19 %"] },
-    notes: "Conecta con el Módulo 1: el corte de máxima utilidad. Si el margen sube, p* sube y se aprueba más." });
-
+  L.sSection(D, { num: 3, title: "La trinidad de tests", sub: "Wald, razón de verosimilitud y score" });
+  L.sTable(D, { title: "Tres formas de contrastar H0: β = 0", colW: [2.6, 4.8, 4.73], rowH: 0.85,
+    header: ["Test", "Estadístico", "Qué necesita"],
+    rows: [["Wald", "W = β̂² / SE(β̂)²  ~  χ²(1)", "Solo el modelo completo (es el z de la salida)"],
+      ["Razón de verosimilitud (LR)", "LR = 2 (ℓ₁ − ℓ₀)  ~  χ²(q)", "Ambos modelos; el más confiable en muestras chicas"],
+      ["Score (Lagrange)", "S = U(β₀)ᵀ I(β₀)⁻¹ U(β₀)", "Solo el modelo restringido: útil para evaluar variables candidatas"]],
+    note: "Son asintóticamente equivalentes. Con coeficientes grandes, el Wald puede perder potencia (efecto Hauck-Donner)." });
+  L.sStats(D, { title: "¿Aportan 'cuenta corriente' y 'ahorro' al modelo?", stats: [
+    { v: "LR = 121", l: "razón de verosimilitud (2 gl)", color: L.HEX.navy, size: 40 },
+    { v: "W = 98", l: "Wald conjunto", color: L.HEX.navy, size: 40 },
+    { v: "S = 111", l: "score", color: L.HEX.navy, size: 40 },
+    { v: "p < 10⁻²¹", l: "en los tres casos: aportan", color: L.HEX.green, size: 36 },
+  ], points: ["Los tres tests coinciden en la conclusión, con estadísticos distintos", "Intervalo perfilado de 'sin cuenta corriente': [−1,95; −1,27] vs. Wald [−1,95; −1,23]: con n grande casi coinciden; con eventos raros, no"],
+    notes: "Valores del notebook M02_S03, sección 3. El LR es 2 × (−523,9 − (−584,6)) ≈ 121." });
+  L.sSection(D, { num: 4, title: "Comparar modelos", sub: "Deviance, AIC y BIC" });
+  L.sTable(D, { title: "AIC y BIC: ¿la variable paga su complejidad?", colW: [3.5, 0.7, 1.5, 1.6, 1.6, 1.6, 1.63], rowH: 0.6,
+    header: ["Modelo", "k", "logLik", "Deviance", "AIC", "BIC", "Pseudo R²"],
+    rows: [["M0: duración + edad", "3", "−584,6", "1 169,2", "1 175,2", "1 189,9", "0,043"], ["M1: + cuenta y ahorro", "5", "−523,9", "1 047,9", "1 057,9", "1 082,4", "0,142"],
+      ["M2: + historia + cuota", "7", "−512,1", "1 024,2", { text: "1 038,2", options: { bold: true, color: L.HEX.green } }, { text: "1 072,6", options: { bold: true, color: L.HEX.green } }, "0,162"],
+      ["M3: M2 + log(monto)", "8", "−511,8", "1 023,6", "1 039,6", "1 078,9", "0,162"]],
+    note: "AIC = −2ℓ + 2k; BIC = −2ℓ + k·log n. Ambos eligen M2: log(monto) no paga su complejidad. Fuente: notebook M02_S03, sección 4.",
+    notes: "El BIC penaliza más la complejidad y tiende a modelos más simples. En el Módulo 3 vemos la selección de variables de forma sistemática." });
   D.sec("Laboratorio y cierre");
-  L.sLab(D, { notebook: "M02_S03_Pruebas_de_Hipotesis_Desbalance_y_Metricas.ipynb", data: ["taiwan_default.csv (UCI, real)", "30 000 tarjetahabientes · 22 % default", "hc_application_sintetico.csv"], steps: [
-    { h: "Test binomial y potencia", t: "Región de rechazo, curvas de potencia y tamaño de muestra" },
-    { h: "Validación por grados", t: "Binomial, Jeffreys, Hosmer-Lemeshow y curva de calibración" },
-    { h: "χ² y KS", t: "Asociación vs. magnitud; separación de buenos y malos" },
-    { h: "Desbalance", t: "class_weight, undersampling y corrección de prior" },
-    { h: "Métricas y corte", t: "ROC, PR, matriz de confusión y corte por costos" },
+  L.sLab(D, { notebook: "M02_S03_Verosimilitud_Inferencia_y_Lectura_de_Resultados.ipynb", data: ["german_credit.csv (UCI, real)", "1 000 créditos · 30 % malos"], steps: [
+    { h: "Verosimilitud", t: "Curvas de log-verosimilitud y MLE a mano con Hessiano" },
+    { h: "Lectura de resultados", t: "Logit en statsmodels: odds ratios, p-valores e IC" },
+    { h: "Trinidad de tests", t: "Wald, LR y score para variables añadidas" },
+    { h: "Intervalos perfilados", t: "Perfil de la log-verosimilitud vs. Wald" },
+    { h: "AIC y BIC", t: "Comparación de cuatro modelos candidatos" },
   ] });
-  L.sTakeaways(D, { title: "Cierre del Módulo 2", items: [
-    "Una prueba de hipótesis controla el error tipo I; la potencia dice si podemos detectar el problema.",
-    "Validar una PD es validar calibración (binomial, Jeffreys, HL) y discriminación (AUC, Gini, KS).",
-    "Significativo no es material: mide siempre la magnitud del efecto.",
-    "Balancear clases no mejora el ranking y descalibra: si lo haces, corrige el prior.",
-    "El corte óptimo sale de los costos del negocio, no de un umbral de 0,5.",
-  ], next: "Módulo 3 · Regresión logística y scorecards." });
+  L.sTakeaways(D, { items: [
+    "La regresión logística es máxima verosimilitud con una PD que depende de x; el Hessiano da los errores estándar.",
+    "Wald, LR y score contrastan lo mismo; el LR es el más confiable en muestras chicas o con eventos raros.",
+    "Los intervalos perfilados corrigen al de Wald cuando la log-verosimilitud no es cuadrática.",
+    "AIC y BIC comparan modelos no anidados y penalizan la complejidad.",
+    "Significancia, relevancia, sentido económico, estabilidad y causalidad son preguntas distintas.",
+  ], next: "pruebas de hipótesis, desbalance de clases y métricas de clasificación." });
   await L.save(D, OUT);
 })();

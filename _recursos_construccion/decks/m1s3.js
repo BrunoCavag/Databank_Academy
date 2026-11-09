@@ -1,125 +1,110 @@
 const L = require("./lib");
-const J = require("../chart_data.json");
 const OUT = process.argv[2];
-const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
 
 (async () => {
-  const D = L.newDeck({ title: "M1 S3 - Organización, segmentación y gobierno", footer: "DataBank Academy · Módulo 1 · Sesión 3 · Organización, segmentación, indicadores y gobierno" });
+  const D = L.newDeck({ title: "M1 S3 - Segmentación, concentración y alertas tempranas", footer: "DataBank Academy · Módulo 1 · Sesión 3 · Segmentación, concentración, alertas tempranas y cobranza" });
   D.sec("Apertura");
-  L.sTitle(D, { kicker: "MÓDULO 1 · SESIÓN 3 DE 3", title: "Organización, segmentación, indicadores y gobierno del riesgo minorista",
-    subtitle: "Quién decide qué, con qué información y bajo qué reglas", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
-    notes: "Cierre del Módulo 1. Ya tenemos ciclo y apetito (S1) e indicadores de cartera (S2). Hoy: la organización que toma las decisiones, cómo segmenta y cómo gobierna los cambios." });
+  L.sTitle(D, { kicker: "MÓDULO 1 · SESIÓN 3 DE 4", title: "Segmentación, concentración, alertas tempranas y cobranza",
+    subtitle: "Gestionar la cartera viva: dónde crecer, qué vigilar y cómo cobrar", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
+    notes: "Las sesiones 1 y 2 trataron la admisión y la medición. Hoy: la gestión de la cartera viva, desde la planificación del crecimiento hasta la curación." });
   L.sAgenda(D, { items: [
-    { t: "Organización del equipo de riesgo minorista", d: "Funciones, líneas de defensa y comités", min: 15 },
-    { t: "Segmentación de productos, clientes y portafolios", d: "Homogeneidad, heterogeneidad y accionabilidad", min: 15 },
-    { t: "Indicadores del ciclo de crédito", d: "Originación, seguimiento, cobranza y recuperación", min: 20 },
-    { t: "Gobierno: facultades, excepciones y cambios de política", d: "Autonomías, champion–challenger y articulación con otras áreas", min: 20 },
-    { t: "Laboratorio y caso integrador", d: "Segmentación, FPD/30@3, cura, facultades y tablero ejecutivo", min: 50, lab: true },
+    { t: "Segmentación de clientes, productos y portafolios", d: "Homogeneidad, heterogeneidad y accionabilidad", min: 15 },
+    { t: "Concentración, diversificación y crecimiento", d: "HHI, límites y planes de crecimiento evaluados por riesgo y capital", min: 20 },
+    { t: "Alerta temprana y listas de vigilancia", d: "Anticipar la mora en clientes que hoy están al día", min: 20 },
+    { t: "Cobranza, refinanciamiento, reestructuración y curación", d: "Estrategias con capacidad limitada y valor esperado", min: 20 },
+    { t: "Laboratorio", d: "HHI, plan de crecimiento, SAT, priorización de cobranza y re-default", min: 40, lab: true },
+  ] });
+  L.sCards(D, { title: "Al terminar la sesión podrás", cols: 2, cards: [
+    { h: "Segmentar para decidir", t: "Diseñar segmentos accionables y leer riesgo y participación en una misma matriz." },
+    { h: "Medir concentración y planificar", t: "Calcular el HHI y evaluar un plan comercial por pérdida esperada y capital." },
+    { h: "Anticipar el deterioro", t: "Construir un sistema de alerta temprana y una lista de vigilancia con reglas de entrada y salida." },
+    { h: "Cobrar con valor esperado", t: "Priorizar la gestión con capacidad limitada y evaluar refinanciamientos con su re-default." },
   ] });
 
-  L.sSection(D, { num: 1, title: "La organización del riesgo minorista", sub: "Funciones, líneas de defensa y espacios de decisión" });
-  L.sCards(D, { title: "Funciones típicas de una gerencia de riesgo minorista", cols: 3, cards: [
-    { h: "Políticas y admisión", t: "Define reglas, cortes, autonomías; opera los motores de decisión." },
-    { h: "Modelos (desarrollo)", t: "Construye scores de originación, comportamiento, cobranza, PD/LGD/EAD." },
-    { h: "Seguimiento de portafolio", t: "Indicadores, cosechas, alertas tempranas, tableros para comité." },
-    { h: "Cobranzas y recuperaciones", t: "Estrategias por tramo, campañas, refinanciaciones, venta de cartera." },
-    { h: "Provisiones y capital", t: "Cálculo SBS e IFRS 9, escenarios, coordinación con Finanzas." },
-    { h: "Validación y gobierno de modelos", t: "Revisión independiente del desempeño y de los supuestos de los modelos." },
-  ], notes: "Dependiendo del tamaño de la entidad, varias funciones se fusionan. Lo importante es separar a quien desarrolla un modelo de quien lo valida." });
-  L.sFlow(D, { title: "Tres líneas de defensa aplicadas al crédito minorista", steps: [
-    { h: "1ª línea: negocio", t: ["Origina y gestiona la relación con el cliente", "Ejecuta la política y responde por sus excepciones", "Dueña del riesgo que asume"] },
-    { h: "2ª línea: riesgos", t: ["Define apetito, políticas y modelos", "Monitorea, alerta y propone acciones", "Valida modelos de forma independiente"] },
-    { h: "3ª línea: auditoría", t: ["Evalúa que el marco se cumpla", "Revisa trazabilidad y documentación", "Reporta al comité de auditoría"] },
-  ], note: "la independencia entre quien origina, quien mide y quien audita es lo que hace creíble a la gestión de riesgos.", size: 16 });
-  L.sTable(D, { title: "Espacios de decisión: quién aprueba qué", colW: [3.0, 4.7, 4.43], rowH: 0.65,
-    header: ["Instancia", "Decide", "Insumos típicos"],
-    rows: [
-      ["Directorio / comité de riesgos", "Apetito de riesgo, límites globales, políticas marco", "Tablero de apetito, stress tests, capital"],
-      ["Comité de créditos minoristas", "Cambios de política, cortes, nuevos productos", "Champion–challenger, cosechas, rentabilidad"],
-      ["Comité de modelos", "Aprobación, uso y retiro de modelos", "Informe de desarrollo y de validación"],
-      ["Comité de provisiones", "Overlays, escenarios IFRS 9", "Proyecciones macro y backtesting"],
-      ["Jefaturas de admisión", "Casos dentro de su autonomía y excepciones", "Score, RCI, verificación"],
-    ], notes: "Cada instancia debe tener actas y trazabilidad: quién propuso, quién validó y quién aprobó." });
-
-  L.sSection(D, { num: 2, title: "Segmentación de cartera", sub: "Segmentar para decidir distinto, no para hacer más reportes" });
+  L.sSection(D, { num: 1, title: "Segmentación de cartera", sub: "Segmentar para decidir distinto, no para hacer más reportes" });
   L.sCards(D, { title: "Tres ejes de segmentación", cols: 3, cards: [
     { h: "Producto", t: ["Revolvente vs. cuotas", "Con o sin garantía", "Plazo y ticket"] },
     { h: "Cliente", t: ["Nuevo vs. recurrente", "Dependiente vs. independiente", "Bancarizado vs. sin historia", "Nivel de riesgo (score)"] },
-    { h: "Portafolio / canal", t: ["Agencia, digital, fuerza de ventas, retail aliado", "Región", "Campaña o convenio"] },
+    { h: "Portafolio y canal", t: ["Agencia, digital, fuerza de ventas, retail aliado", "Región", "Campaña o convenio"] },
   ], notes: "La segmentación de modelos (un score por segmento) y la de gestión (estrategias distintas) no siempre coinciden." });
   L.sCompare(D, { title: "¿Cuándo una segmentación es buena?", left: { h: "Criterios estadísticos", icon: "✓", items: ["Homogeneidad interna: riesgo parecido dentro del segmento", "Heterogeneidad entre segmentos: tasas de malos claramente distintas", "Tamaño suficiente para estimar y monitorear", "Estabilidad en el tiempo"] },
-    right: { h: "Criterios de negocio", icon: "$", items: ["Accionable: cada segmento tiene una estrategia distinta", "Entendible por comercial y cobranzas", "Implementable en los sistemas (motor de decisión)", "Alineada con la rentabilidad"] },
+    right: { h: "Criterios de negocio", icon: "$", items: ["Accionable: cada segmento tiene una estrategia distinta", "Entendible por comercial y cobranzas", "Implementable en el motor de decisión", "Alineada con la rentabilidad"] },
     verdict: "si dos segmentos reciben la misma política, el mismo precio y la misma cobranza, en la práctica son un solo segmento." });
 
-  L.sSection(D, { num: 3, title: "Indicadores del ciclo de crédito", sub: "Una métrica para cada decisión" });
-  L.sTable(D, { title: "El tablero por etapa del ciclo", colW: [2.2, 4.6, 5.33], rowH: 0.72,
-    header: ["Etapa", "Indicadores", "Pregunta que responde"],
-    rows: [
-      ["Originación", "Tasa de aprobación, ticket, FPD, 30@3, 60@6", "¿Estamos aprobando bien?"],
-      ["Seguimiento", "% al día, entradas a mora 1-30, migración de categorías", "¿Se deteriora la cartera viva?"],
-      ["Cobranza", "Roll rate 1-30 → 31-60, tasa de cura, contactabilidad", "¿La cobranza contiene la mora?"],
-      ["Recuperación", "Castigos, tasa de recupero post-castigo, LGD observada", "¿Cuánto recuperamos de lo perdido?"],
-      ["Rentabilidad", "Margen ajustado por riesgo, costo de riesgo, RAROC", "¿El precio paga el riesgo?"],
-    ], notes: "FPD (first payment default): el cliente no paga su primera cuota. Es un indicador muy temprano de fraude o de problemas de admisión." });
-  const tp = J.m1s3_temprana;
-  L.sChart(D, { title: "Indicadores tempranos de originación por cosecha", chart: { type: "line", labels: tp.labels.map(x => x.replace("Q", " T")),
-      series: [{ name: "FPD", values: tp.FPD }, { name: "30@3", values: tp["30@3"] }, { name: "60@6", values: tp["60@6"] }],
-      opts: { showLegend: true, valAxisLabelFormatCode: "0.0%", lineSize: 3, lineDataSymbol: "circle", lineDataSymbolSize: 6, chartColors: [L.HEX.slate, L.HEX.gold, L.HEX.crimson] } },
-    points: ["30@3: % de la cosecha con más de 30 días de atraso en sus primeros 3 meses", "60@6: idem, más de 60 días en 6 meses", "Se leen 3-6 meses después del desembolso: ideales para evaluar cambios de política"],
-    source: "Fuente: cartera_panel_mensual.csv.gz (sintético). Tarjeta, consumo y microempresa. Notebook M01_S03.",
-    notes: "Notar que las cosechas de 2023 tienen 60@6 claramente mayor. Si una nueva política se implementa, el 30@3 de las primeras cosechas da la primera lectura." });
-  const rc = J.m1s3_recupero;
-  L.sChart(D, { title: "Recuperación: cuánto vuelve después del castigo", chart: { type: "bar", labels: rc.labels.map(x => x.replace("Consumo no revolvente", "Consumo NR").replace("Tarjeta de crédito", "Tarjeta")), series: [{ name: "Tasa de recupero a 12 meses", values: rc.values }],
-      opts: { barDir: "bar", showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: "0%", valAxisLabelFormatCode: "0%", chartColors: [L.HEX.green] } },
-    points: ["Productos con garantía (vehicular, hipotecario) recuperan más", "LGD aproximada = 1 − tasa de recupero", "Falta descontar el tiempo y los costos de cobranza: workout LGD en el Módulo 7"],
-    source: "Castigos con al menos 12 meses de observación. Notebook M01_S03, sección 2.",
-    notes: "La LGD observada es un insumo clave para el pricing y las provisiones." });
+  L.sSection(D, { num: 2, title: "Concentración, diversificación y crecimiento", sub: "La concentración minorista no está en los deudores, sino en las dimensiones" });
+  L.sFormula(D, { title: "Medir la concentración: índice de Herfindahl-Hirschman", formula: "HHI = Σ w_k²        N equivalente = 1 / HHI", fsize: 34,
+    where: [["w_k", "Participación del grupo k en el saldo (producto, región, canal, empleador)"], ["HHI", "De 1/K (perfectamente repartido) a 1 (todo en un grupo)"], ["1 / HHI", "Número de grupos de igual tamaño que darían la misma concentración"], ["Límite", "Máximo % por grupo o HHI máximo por dimensión"]],
+    example: { h: "En el caso (junio 2026)", t: ["Producto: HHI 0,51 → 2 productos 'equivalentes' (hipotecario 69 %)", "Región: HHI 0,34 (Lima 52 %)", "Canal: HHI 0,31", "Los 10 mayores deudores: solo 2,5 % del saldo"] },
+    notes: "Valores del notebook M01_S03, sección 2. La concentración individual es baja, pero la de producto y región es relevante: un shock inmobiliario o regional afectaría a gran parte del saldo." });
+  L.sTable(D, { title: "Planificar el crecimiento: no todo crecimiento cuesta lo mismo", colW: [3.6, 1.6, 1.7, 1.7, 1.7, 1.83], rowH: 0.62,
+    header: ["Plan", "Saldo (S/ MM)", "Crecimiento", "EL (S/ MM)", "Capital (S/ MM)", "EL / saldo"],
+    rows: [["Actual", "305,8", "—", "4,39", "19,6", "1,44 %"],
+      ["A: tarjeta +40 %", "312,0", "+2,0 %", { text: "4,78", options: { color: L.HEX.crimson, bold: true } }, "20,3", "1,53 %"],
+      ["B: consumo y micro +25 %", "316,8", "+3,6 %", { text: "4,86", options: { color: L.HEX.crimson, bold: true } }, "20,7", "1,53 %"],
+      ["C: hipotecario +20 %", "348,2", "+13,9 %", "4,61", { text: "22,0", options: { color: L.HEX.gold, bold: true } }, "1,32 %"]],
+    note: "PD through-the-cycle, LGD y capital IRB por producto de la sesión 2. Fuente: notebook M01_S03, sección 3.",
+    notes: "El plan A crece 2 % en saldo pero suma casi tanta pérdida esperada como el plan C, que crece 14 %. El plan C consume más capital. Un plan comercial debe aprobarse con su efecto en provisiones, capital y RAROC, no solo en volumen." });
 
-  L.sSection(D, { num: 4, title: "Gobierno de políticas", sub: "Facultades, excepciones y cambios controlados" });
-  const fac = [["Automático", "Analista", "Jefe de admisión", "Comité de créditos"], ["Automático", "Automático", "Analista", "Jefe de admisión"], ["Automático", "Automático", "Automático", "Analista"]];
-  const fcol = { "Automático": "D8F0E3", "Analista": "FFF4D6", "Jefe de admisión": "FBD9DE", "Comité de créditos": "F4B6BE" };
-  L.sTable(D, { title: "Matriz de facultades: monto × nivel de riesgo", w: 9.3, colW: [1.7, 1.9, 1.9, 1.9, 1.9], rowH: 0.85, fsize: 14,
-    header: ["Riesgo \\ monto", "≤ S/ 15 mil", "S/ 15-40 mil", "S/ 40-100 mil", "> S/ 100 mil"],
-    rows: ["Alto", "Medio", "Bajo"].map((r, i) => [r, ...fac[i].map(f => ({ text: f, options: { fill: { color: fcol[f] }, align: "center", bold: false } }))]),
-    side: ["81 % de las solicitudes se resuelve automáticamente", "14 % va a analista, 5 % a jefatura y < 1 % a comité", "Más autonomía automática: más rapidez y menor costo, pero más riesgo sin revisar", "El comité debería ver pocos casos, pero con alto monto en riesgo"],
-    notes: "Valores de la simulación del notebook M01_S03, sección 3." });
-  L.sFlow(D, { title: "Champion–challenger: cambiar la política con evidencia", steps: [
-    { h: "Hipótesis", t: ["Qué cambia y por qué", "Métrica de éxito definida antes"] },
-    { h: "Asignación aleatoria", t: ["10-20 % al challenger", "Tamaño de muestra con potencia suficiente (M2)"] },
-    { h: "Maduración", t: ["Esperar 30@3 / 60@6", "No decidir con la mora del primer mes"] },
-    { h: "Decisión", t: ["Comité con resultados y significancia", "Documentar quién propuso, validó y aprobó"] },
-    { h: "Despliegue", t: ["Implementación gradual", "Monitoreo y plan de rollback"] },
-  ], note: "sin asignación aleatoria no se puede atribuir la diferencia a la política: puede ser el ciclo, el canal o la campaña." });
-  L.sStats(D, { title: "El experimento del caso", stats: [
-    { v: "77,6 %", l: "aprobación champion (corte 415)", color: L.HEX.navy },
-    { v: "80,9 %", l: "aprobación challenger (corte 365, RCI ≤ 100 %)", color: L.HEX.green },
-    { v: "5,0 % vs 5,3 %", l: "tasa de malos champion vs. challenger", size: 34 },
-    { v: "p = 0,24", l: "la diferencia en tasa de malos no es significativa al 5 %", color: L.HEX.gold },
-  ], points: ["+3,3 pp de aprobación con una tasa de malos dentro de la meta (≤ 5,5 %)", "Pero 'no significativo' no significa 'igual': con 12 mil casos el test tiene poca potencia para diferencias de 0,3 pp (Módulo 2)"],
-    notes: "Valores del notebook M01_S03, sección 4. Buena puerta de entrada al Módulo 2: pruebas de hipótesis y potencia." });
-  L.sCards(D, { title: "Articulación con otras áreas", cols: 3, cards: [
-    { h: "Negocio", t: "Metas de crecimiento compatibles con el apetito; dueño de las excepciones; retroalimenta sobre fricciones del proceso." },
-    { h: "Finanzas", t: "Presupuesto de provisiones y costo de riesgo; tasas de fondeo; rentabilidad y capital por producto." },
-    { h: "Cobranzas", t: "Capacidad operativa frente al crecimiento; estrategias por segmento; datos de cura y recupero para los modelos." },
-  ], notes: "El caso integrador final del programa pide justamente esta integración ante un panel." });
-  L.sQuestion(D, { title: "Caso de discusión", q: "Comercial propone bajar el corte de 415 a 365 para todos los canales: \"la mora está en mínimos\". Finanzas pide crecer 20 % y Cobranzas está al 95 % de su capacidad.",
-    hint: "¿Qué indicadores apoyan o contradicen el argumento (mora contable vs. cosechas)? ¿Qué evidencia pedirías? ¿Qué condiciones pondrías: canal, límites, monitoreo, rollback? ¿Cómo involucras a Finanzas y Cobranzas?",
-    notes: "Grupos de 4, 10 minutos, luego plenaria. Usar el tablero ejecutivo del notebook como insumo." });
+  L.sSection(D, { num: 3, title: "Alerta temprana y listas de vigilancia", sub: "Actuar antes de que el cliente caiga en mora" });
+  L.sFlow(D, { title: "Cómo se construye un sistema de alerta temprana (SAT)", steps: [
+    { h: "Población", t: ["Clientes al día en el mes t"] },
+    { h: "Evento", t: ["30+ días en los próximos 3 meses"] },
+    { h: "Señales", t: ["Atrasos recientes, amortización, antigüedad, buró, macro"] },
+    { h: "Modelo", t: ["Logística validada fuera de tiempo"] },
+    { h: "Acción", t: ["Watchlist con reglas de entrada, acción y salida"] },
+  ], note: "un SAT se evalúa por lo que permite hacer: captura de futuras moras en la lista, y efecto de las acciones frente a un grupo de control." });
+  L.sChart(D, { title: "El SAT concentra las futuras moras en pocos clientes", chart: { type: "bar", labels: ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10"],
+      series: [{ name: "Captura acumulada de futuras moras", values: [0.498, 0.648, 0.776, 0.872, 0.920, 0.958, 0.966, 0.987, 0.996, 1.0] }],
+      opts: { showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: "0%", valAxisLabelFormatCode: "0%", valAxisMinVal: 0, valAxisMaxVal: 1.1, chartColors: [L.HEX.navy], catAxisTitle: "Decil de score SAT (D1 = mayor riesgo)", showCatAxisTitle: true } },
+    kpi: { v: "50 %", l: "de las futuras moras en el 10 % de clientes (lift 5x)" },
+    points: ["AUC 0,82 en desarrollo y 0,82 fuera de tiempo: estable", "Tasa de evento base: 1,2 % mensual", "El decil 1 es la candidata natural a watchlist"],
+    source: "Validación fuera de tiempo (jul-2025 a jun-2026). Notebook M01_S03, sección 4." });
+  L.sCards(D, { title: "Reglas de una lista de vigilancia", cols: 3, cards: [
+    { h: "Entrada", t: ["Score SAT sobre el umbral", "Alerta de buró (nuevas deudas, atraso en otra entidad)", "Sobreendeudamiento o caída de ingresos"] },
+    { h: "Acción", t: ["Contacto preventivo", "Congelar incrementos de línea", "Oferta temprana de reestructuración", "Revisión en comité"] },
+    { h: "Salida", t: ["3 meses sin alertas", "Regularización comprobada", "Medición del efecto frente a un grupo de control"] },
+  ] });
+
+  L.sSection(D, { num: 4, title: "Cobranza, refinanciamiento y curación", sub: "Capacidad limitada, valor esperado y re-default" });
+  L.sChart(D, { title: "Priorizar la cobranza por valor esperado", chart: { type: "bar", labels: ["Aleatoria", "Menor p(cura)", "Mayor saldo", "Mayor valor esperado"],
+      series: [{ name: "Saldo esperado salvado (S/ miles)", values: [54.3, 60.9, 163.4, 165.9] }],
+      opts: { barDir: "bar", showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: "0.0", chartColors: [L.HEX.green] } },
+    points: ["Capacidad: llamar al 25 % de los clientes en 1-30 días", "Valor de gestionar = uplift × (1 − p(cura)) × saldo", "El uplift debe medirse con grupos de control, no suponerse"],
+    source: "Score de cura con AUC 0,65; uplift supuesto de 30 %. Notebook M01_S03, sección 5." });
+  L.sTable(D, { title: "Matriz de estrategias de cobranza temprana", colW: [2.8, 4.5, 4.83], rowH: 1.0, fsize: 16,
+    header: ["", "Saldo bajo", "Saldo alto"],
+    rows: [["p(cura) alta", { text: "Recordatorio digital: SMS, WhatsApp, app", options: { fill: { color: "D8F0E3" }, bold: false } }, { text: "Recordatorio digital + llamada", options: { fill: { color: "FFF4D6" }, bold: false } }],
+      ["p(cura) baja", { text: "Call center: compromiso y fecha de pago", options: { fill: { color: "FFF4D6" }, bold: false } }, { text: "Gestor dedicado; evaluar refinanciamiento", options: { fill: { color: "FBD9DE" }, bold: false } }]],
+    note: "La estrategia se asigna por segmento y se ajusta con experimentos (champion–challenger de cobranza)." });
+  L.sCompare(D, { title: "Refinanciamiento vs. reestructuración", left: { h: "Refinanciamiento", icon: "R", items: ["Cambia plazo, cuota o tasa por dificultades de pago", "Herramienta de cobranza de uso frecuente", "Riesgo: ocultar mora sin recuperar capacidad de pago"] },
+    right: { h: "Reestructuración", icon: "E", items: ["Cambio más profundo, a menudo en un proceso formal", "Puede incluir quitas o consolidación de deudas", "Tratamiento de clasificación y provisión específico de la SBS"] },
+    verdict: "toda operación refinanciada o reestructurada debe marcarse en los sistemas y seguirse por su re-default." });
+  L.sTable(D, { title: "Curación no es lo mismo que riesgo resuelto", colW: [3.2, 2.2, 3.0, 3.73], w: 12.13, rowH: 0.6,
+    header: ["Producto", "Casos en 31-60", "Cura en 6 meses", "Re-default en 12 meses"],
+    rows: [["Tarjeta", "875", "32,7 %", "14,9 %"], ["Consumo NR", "496", "31,9 %", "15,1 %"], ["Microempresa", "398", "26,4 %", { text: "55,6 %", options: { color: L.HEX.crimson, bold: true } }], ["Vehicular", "61", "37,7 %", "15,0 %"], ["Hipotecario", "31", "45,2 %", "0 %"]],
+    note: "Microempresa: la mitad de los que curan vuelve a caer. Una cura que no se sostiene solo posterga la pérdida. Fuente: notebook M01_S03, sección 6." });
+  L.sStats(D, { title: "¿Conviene refinanciar? Una cuenta de valor esperado", stats: [
+    { v: "S/ 31", l: "recuperados por cada S/ 100 sin refinanciar (cura 12 %, LGD 78 %)", color: L.HEX.crimson },
+    { v: "S/ 50", l: "con refinanciamiento (cura 45 %, costo 3 %, pérdida de margen 10 %)", color: L.HEX.green },
+    { v: "18 %", l: "cura mínima para que el refinanciamiento convenga", color: L.HEX.gold },
+  ], points: ["La decisión depende de la cura incremental, no de la cura total", "Gobierno: elegibilidad, análisis de capacidad, marca en sistemas, seguimiento por cosecha de refinanciamiento"] });
+  L.sQuestion(D, { q: "Cobranzas propone refinanciar automáticamente a todos los clientes de microempresa en 61-90 días. ¿Lo aprobarías?",
+    hint: "Usa el re-default de microempresa (56 %), el umbral de cura de equilibrio (18 %) y la capacidad operativa. ¿Qué condiciones pondrías?" });
 
   D.sec("Laboratorio y cierre");
-  L.sLab(D, { notebook: "M01_S03_Segmentacion_Indicadores_y_Gobierno.ipynb", data: ["cartera_panel_mensual.csv.gz", "hc_application_sintetico.csv"], steps: [
-    { h: "Segmentación", t: "Matriz producto × segmento y crecimiento vs. riesgo por canal" },
-    { h: "Indicadores del ciclo", t: "FPD, 30@3, 60@6, entradas a mora, cura y recupero" },
-    { h: "Facultades", t: "Carga por nivel de autonomía" },
-    { h: "Champion–challenger", t: "Aprobación, tasa de malos y test de proporciones" },
-    { h: "Tablero ejecutivo", t: "KPIs y tendencias en una página para el comité" },
+  L.sLab(D, { notebook: "M01_S03_Segmentacion_Concentracion_y_Alertas_Tempranas.ipynb", data: ["cartera_panel_mensual.csv.gz", "macro_peru_ilustrativa.csv"], steps: [
+    { h: "Segmentación y concentración", t: "Matriz producto × segmento, HHI por dimensión" },
+    { h: "Plan de crecimiento", t: "EL y capital de tres planes comerciales" },
+    { h: "Alerta temprana", t: "SAT con variables de comportamiento, validación fuera de tiempo, watchlist" },
+    { h: "Cobranza", t: "Score de cura y priorización con capacidad limitada" },
+    { h: "Curación y refinanciamiento", t: "Cura, re-default y valor esperado" },
   ] });
-  L.sTakeaways(D, { title: "Cierre del Módulo 1", items: [
-    "La gestión integral conecta originación, seguimiento, cobranza, provisiones y rentabilidad en un solo sistema.",
-    "El apetito se vuelve operativo con límites, cortes, facultades y un % máximo de excepciones.",
-    "Cada etapa del ciclo tiene sus indicadores; los adelantados (cosechas, 30@3) son los que permiten anticiparse.",
-    "Los cambios de política se prueban con champion–challenger y se gobiernan con trazabilidad.",
-    "Siguiente paso: el lenguaje probabilístico que sostiene los modelos de PD.",
-  ], next: "Módulo 2 · Fundamentos estadísticos para riesgo." });
+  L.sTakeaways(D, { items: [
+    "Una segmentación vale si cambia decisiones: política, precio, línea o cobranza.",
+    "En minorista la concentración relevante es por producto, región, canal o convenio, y se controla con límites.",
+    "Un plan comercial se evalúa por su pérdida esperada y su capital, no solo por el volumen.",
+    "La alerta temprana y la watchlist permiten actuar antes de la mora; su valor se mide frente a un grupo de control.",
+    "La cobranza se prioriza por valor esperado, y toda cura se juzga por su re-default.",
+  ], next: "gobierno del riesgo, de datos y de modelos, tendencias y caso integrador." });
   await L.save(D, OUT);
 })();

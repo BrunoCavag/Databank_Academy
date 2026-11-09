@@ -6,7 +6,7 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
 (async () => {
   const D = L.newDeck({ title: "M2 S1 - Probabilidad para el incumplimiento", footer: "DataBank Academy · Módulo 2 · Sesión 1 · Variables aleatorias, probabilidad condicional y esperanza" });
   D.sec("Apertura");
-  L.sTitle(D, { kicker: "MÓDULO 2 · SESIÓN 1 DE 3", title: "Variables aleatorias, probabilidad condicional y esperanza",
+  L.sTitle(D, { kicker: "MÓDULO 2 · SESIÓN 1 DE 4", title: "Variables aleatorias, probabilidad condicional y esperanza",
     subtitle: "El lenguaje probabilístico del incumplimiento", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
     notes: "El Módulo 1 fue el lenguaje de negocio; el Módulo 2 es el lenguaje probabilístico. Todo modelo de PD estima una probabilidad condicional, y toda provisión es una esperanza." });
   L.sAgenda(D, { items: [
@@ -26,7 +26,7 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
   L.sSection(D, { num: 1, title: "El incumplimiento como variable aleatoria", sub: "Bernoulli y Binomial" });
   L.sFormula(D, { title: "Cada cliente es una Bernoulli", formula: "D_i ~ Bernoulli(p_i)    E[D_i] = p_i    Var(D_i) = p_i (1 − p_i)", fsize: 28,
     where: [["D_i", "1 si el cliente i incumple en el horizonte (p. ej., 90+ días en 12 meses), 0 si no"], ["p_i = PD_i", "Probabilidad de incumplimiento del cliente i"], ["E[D_i]", "La esperanza de un indicador es su probabilidad"], ["Var(D_i)", "Máxima cuando p = 50 %; pequeña cuando p es cercana a 0"]],
-    example: { h: "En nuestra cartera", t: ["PD observada: " + pct(J.m2s1_binom.pd, 2), "Var(D) = 0,08 × 0,92 ≈ 0,073", "Desviación ≈ 0,27", "La 'definición de default' (días, horizonte) es una decisión de negocio: Módulo 7"] },
+    example: { h: "En nuestra cartera", t: ["PD observada: " + pct(J.m2s1_binom.pd, 2), "Var(D) = 0,08 × 0,92 ≈ 0,073", "Desviación ≈ 0,27", "La 'definición de default' (días, horizonte) es una decisión de negocio: Módulo 8"] },
     notes: "Enfatizar que la definición del evento (90 días, 12 meses) cambia todo lo que sigue. Basilea define el default como 90+ días de atraso o improbabilidad de pago." });
   L.sFormula(D, { title: "Una cartera homogénea e independiente es una Binomial", formula: "N = Σ D_i ~ Binomial(n, p)    E[N] = n·p    Var(N) = n·p·(1 − p)", fsize: 28,
     where: [["n", "Número de créditos"], ["p", "PD común (cartera homogénea)"], ["Supuesto 1", "Independencia: el default de uno no cambia la probabilidad de otro"], ["Supuesto 2", "Homogeneidad: todos tienen la misma PD"]],
@@ -58,7 +58,7 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
       series: [{ name: "Falsos positivos 5 %", values: by.f05 }, { name: "Falsos positivos 15 %", values: by.f15 }, { name: "Falsos positivos 30 %", values: by.f30 }, { name: "Sin información (posterior = prior)", values: by.prior }],
       opts: { showLegend: true, valAxisLabelFormatCode: "0%", lineSize: 3, lineDataSymbol: "none", chartColors: [L.HEX.green, L.HEX.navy, L.HEX.crimson, L.HEX.slate], catAxisTitle: "PD base del segmento (prior)", showCatAxisTitle: true, valAxisTitle: "PD dada la alerta", showValAxisTitle: true } },
     points: ["Con PD base baja (hipotecario), una alerta genera muchos falsos positivos", "Con PD base alta (micro), la misma alerta casi confirma el deterioro", "Las reglas de cobranza preventiva deben calibrarse por segmento"],
-    notes: "Sensibilidad fija en 60 %. Volveremos a Bayes en el Módulo 10 como forma de actualizar creencias y optimizar hiperparámetros." });
+    notes: "Sensibilidad fija en 60 %. Volveremos a Bayes en el Módulo 6 como forma de actualizar creencias y optimizar hiperparámetros." });
 
   L.sSection(D, { num: 3, title: "Esperanza, varianza y pérdida esperada", sub: "De la PD individual a la cartera" });
   L.sFormula(D, { title: "Pérdida esperada: la linealidad de la esperanza", formula: "L_i = D_i · LGD_i · EAD_i     E[Σ L_i] = Σ PD_i · LGD_i · EAD_i", fsize: 28,
@@ -87,9 +87,9 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
   L.sChart(D, { title: "Una PD de 8 % en un escenario de 1 en 1 000 años", chart: { type: "bar", labels: vs.labels.map(x => "ρ = " + x), series: [{ name: "PD condicional al percentil 99,9 %", values: vs.values }],
       opts: { showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: "0%", valAxisLabelFormatCode: "0%", chartColors: [L.HEX.navy] } },
     kpi: { v: pct(vs.values[1], 0), l: "PD estresada con ρ = 5 %" },
-    points: ["PD(M) = Φ[(Φ⁻¹(PD) + √ρ · Φ⁻¹(0,999)) / √(1 − ρ)]", "Base de la fórmula de capital IRB y de los ejercicios de stress (M9)"] });
-  L.sCompare(D, { title: "Pérdida esperada vs. pérdida inesperada", left: { h: "Pérdida esperada (EL)", icon: "E", items: ["Media de la distribución de pérdidas", "Costo del negocio: se cubre con provisiones", "Debe estar incluida en la tasa (pricing)", "Módulos 7 y 8"] },
-    right: { h: "Pérdida inesperada (UL)", icon: "U", items: ["VaR al 99,9 % menos la EL", "Se cubre con capital", "El capital tiene un costo que también entra al precio (RAROC)", "Módulos 8 y 9"] },
+    points: ["PD(M) = Φ[(Φ⁻¹(PD) + √ρ · Φ⁻¹(0,999)) / √(1 − ρ)]", "Base de la fórmula de capital IRB y de los ejercicios de stress (M11)"] });
+  L.sCompare(D, { title: "Pérdida esperada vs. pérdida inesperada", left: { h: "Pérdida esperada (EL)", icon: "E", items: ["Media de la distribución de pérdidas", "Costo del negocio: se cubre con provisiones", "Debe estar incluida en la tasa (pricing)", "Módulos 9 y 10"] },
+    right: { h: "Pérdida inesperada (UL)", icon: "U", items: ["VaR al 99,9 % menos la EL", "Se cubre con capital", "El capital tiene un costo que también entra al precio (RAROC)", "Módulos 10 y 11"] },
     verdict: "un precio que sólo cubre la pérdida esperada no paga el capital que la volatilidad exige." });
 
   D.sec("Laboratorio y cierre");

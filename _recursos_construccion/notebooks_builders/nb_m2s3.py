@@ -6,240 +6,186 @@ cells = [
 ("md", """
 ## Objetivos de la sesión (2 horas)
 
-1. Plantear **pruebas de hipótesis** en problemas de riesgo: H0, H1, estadístico, p-valor, **errores tipo I y II** y **potencia**.
-2. Aplicar los tests más usados en validación: **binomial y Jeffreys** (calibración por grado), **chi-cuadrado** (variable vs. incumplimiento), **Kolmogorov-Smirnov** y **Hosmer-Lemeshow**.
-3. Calcular el **tamaño de muestra** necesario para detectar un cambio de PD.
-4. Entender el **desbalance de clases** y elegir las **métricas** correctas: matriz de confusión, precisión, recall, ROC-AUC, Gini, KS, PR-AUC, Brier y log-loss.
-5. Elegir un **punto de corte** según costos de negocio.
-
-**Datos:** *Default of Credit Card Clients* (Taiwán, UCI): 30 mil tarjetahabientes, 22 % de incumplimiento, datos reales. También usamos las solicitudes tipo Home Credit (8 % de incumplimiento).
+1. Entender la **verosimilitud** y el **estimador de máxima verosimilitud** (MLE), la base de la regresión logística.
+2. Derivar el **error estándar** desde la información de Fisher y el Hessiano.
+3. Usar la **trinidad de tests**: Wald, razón de verosimilitud (LR) y score; comparar modelos anidados.
+4. Construir intervalos de **verosimilitud perfilada** y compararlos con los de Wald.
+5. Comparar modelos no anidados con **AIC y BIC**, y leer la **salida estadística** completa de un modelo.
 
 | Bloque | Tiempo | Contenido |
 |---|---|---|
-| 1 | 30 min | Lógica de las pruebas, errores y potencia |
-| 2 | 30 min | Tests de validación de modelos de PD |
-| 3 | 15 min | Desbalance de clases |
-| 4 | 35 min | Métricas de clasificación crediticia y punto de corte |
+| 1 | 35 min | Verosimilitud, MLE, Fisher y MLE numérico de una logística |
+| 2 | 25 min | Lectura de resultados estadísticos |
+| 3 | 30 min | Wald, LR y score; modelos anidados; IC perfilados |
+| 4 | 20 min | AIC, BIC y deviance |
 | 5 | 10 min | Ejercicios |
 """),
 ("code", SETUP + """
-from scipy import stats
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (roc_auc_score, roc_curve, precision_recall_curve, average_precision_score,
-                             confusion_matrix, brier_score_loss, log_loss, classification_report)
-tw = pd.read_csv(DATA / "taiwan_default.csv")
+from scipy import stats, optimize
+import statsmodels.api as sm
+from statsmodels.stats.proportion import proportion_confint
 app = pd.read_csv(DATA / "hc_application_sintetico.csv")
-rng = np.random.default_rng(1)
-print(tw.shape, f"tasa de incumplimiento Taiwán: {tw['default'].mean():.2%}")
+german = pd.read_csv(DATA / "german_credit.csv")
+rng = np.random.default_rng(2027)
 """),
 ("md", """
-## 1. La lógica de una prueba de hipótesis
+## 1. Verosimilitud y máxima verosimilitud
+Dados datos $d_1, \\dots, d_n$ con $D_i \\sim \\text{Bernoulli}(p)$:
+$$\\mathcal{L}(p) = \\prod_{i=1}^n p^{d_i}(1-p)^{1-d_i}, \\qquad \\ell(p) = \\log \\mathcal{L}(p) = k \\log p + (n-k)\\log(1-p)$$
+Derivando e igualando a cero: $\\hat p_{MLE} = k/n$. La **curvatura** de $\\ell$ en el máximo (información de Fisher) da el error estándar:
+$$I(p) = \\frac{n}{p(1-p)} \\quad\\Rightarrow\\quad SE(\\hat p) = \\sqrt{\\hat p(1-\\hat p)/n}$$
+"""),
+("code", """
+fig, ax = plt.subplots(figsize=(10, 4.5))
+grid = np.linspace(0.005, 0.4, 500)
+for n, c in [(50, GRIS), (200, ORO), (1000, AZUL)]:
+    k = round(0.08 * n)
+    ll = k * np.log(grid) + (n - k) * np.log(1 - grid)
+    ax.plot(grid, ll - ll.max(), color=c, lw=2, label=f"n={n}, k={k}")
+ax.axhline(-1.92, color=ROJO, ls=":", label="−χ²(1, 0.95)/2  → IC por razón de verosimilitud")
+ax.set_ylim(-10, 0.5); ax.set_xlabel("p"); ax.set_ylabel("ℓ(p) − ℓ(p̂)"); ax.legend(); ax.set_title("Más datos → log-verosimilitud más 'puntiaguda' → menos incertidumbre")
+plt.show()
+"""),
+("md", """
+### MLE numérico: de una PD constante a una PD que depende de $x$
+Si dejamos que $p_i$ dependa de las características del cliente mediante $p_i = \\frac{1}{1 + e^{-(\\beta_0 + \\beta_1 x_i)}}$, maximizar $\\ell(\\beta)$ es exactamente **estimar una regresión logística**. Hagámoslo "a mano" con un optimizador y comparemos con `statsmodels`.
+"""),
+("code", """
+x = german["duration_in_month"].values
+yv = german["default"].values
+def neg_loglik(beta):
+    eta = beta[0] + beta[1] * x
+    return -np.sum(yv * eta - np.log1p(np.exp(eta)))
+opt = optimize.minimize(neg_loglik, x0=[0, 0], method="BFGS")
+# Error estándar desde el Hessiano analítico de la log-verosimilitud: H = X' W X, con W = diag(p(1-p))
+Xd = np.column_stack([np.ones_like(x), x]).astype(float)
+p_fit = 1 / (1 + np.exp(-Xd @ opt.x))
+H = Xd.T @ (Xd * (p_fit * (1 - p_fit))[:, None])
+se_manual = np.sqrt(np.diag(np.linalg.inv(H)))       # (la aproximación hess_inv de BFGS NO es confiable para esto)
+print("MLE manual:   beta =", opt.x.round(4), " SE aprox =", se_manual.round(4), " logLik =", round(-opt.fun, 2))
+m = sm.Logit(yv, sm.add_constant(x)).fit(disp=0)
+print("statsmodels:  beta =", m.params.round(4), " SE =", m.bse.round(4), " logLik =", round(m.llf, 2))
+"""),
+("md", """
+## 2. Lectura de resultados estadísticos
+Estimemos un modelo con varias variables del *German Credit* (datos reales, 1 000 créditos, 30 % malos) y leamos la salida **como lo haría un comité de validación**.
+"""),
+("code", """
+g = german.copy()
+g["sin_cuenta_corriente"] = (g["status_of_existing_checking_account"] == "no checking account").astype(int)
+g["historia_critica"] = (g["credit_history"].str.contains("critical")).astype(int)
+g["ahorro_bajo"] = (g["savings_account_and_bonds"] == "... < 100 DM").astype(int)
+g["log_monto"] = np.log(g["credit_amount"])
+X = sm.add_constant(g[["duration_in_month", "log_monto", "age_in_years", "sin_cuenta_corriente", "historia_critica", "ahorro_bajo",
+                       "installment_rate_in_percentage_of_disposable_income"]])
+modelo = sm.Logit(g["default"], X).fit(disp=0)
+print(modelo.summary())
+"""),
+("code", """
+res = pd.DataFrame({"coef": modelo.params, "odds_ratio": np.exp(modelo.params), "p_value": modelo.pvalues,
+                    "OR_inf": np.exp(modelo.conf_int()[0]), "OR_sup": np.exp(modelo.conf_int()[1])})
+res.style.format({"coef": "{:+.3f}", "odds_ratio": "{:.3f}", "p_value": "{:.4f}", "OR_inf": "{:.3f}", "OR_sup": "{:.3f}"}).map(
+    lambda v: "color: #C8102E; font-weight: bold" if isinstance(v, float) and v < 0.05 else "", subset=["p_value"])
+"""),
+("md", """
+**Guía de lectura (para usar en clase):**
 
-| | **H0 es verdadera** | **H0 es falsa** |
+| Elemento | Cómo leerlo |
+|---|---|
+| `coef` | Cambio en **log-odds** de incumplir por una unidad de $x$ |
+| `odds_ratio = e^coef` | Multiplicador de los *odds*: 1.5 significa +50 % en los odds de incumplir |
+| `std err` | Incertidumbre del coeficiente (viene de la curvatura de la log-verosimilitud) |
+| `z`, `P>|z|` | Test de Wald, H0: β = 0. Un p-valor bajo indica evidencia contra "no tiene efecto" |
+| `[0.025, 0.975]` | IC 95 % del coeficiente. Si contiene 0, no es significativo al 5 % |
+| `Log-Likelihood`, `LL-Null`, `LLR p-value` | Mejora del modelo frente a uno con solo constante (test de razón de verosimilitud) |
+| `Pseudo R-squ.` (McFadden) | $1 - \\ell_{modelo}/\\ell_{nulo}$. Valores entre 0.1 y 0.3 son habituales en riesgo: **no se compara con el R² de MCO** |
+
+> 🔎 **Caso para discutir:** en el *German Credit*, "sin cuenta corriente" e "historia crítica" **reducen** el riesgo estimado. ¿Error? Es un efecto conocido del dataset: la muestra viene de créditos **aprobados**, de modo que los clientes con historia "crítica" que pasaron la admisión fueron muy filtrados (**sesgo de selección / reject inference**). Un signo contraintuitivo debe investigarse antes de aceptarse.
+
+> ⚠️ **Significancia estadística ≠ relevancia de negocio ≠ causalidad.** Con 1 millón de registros casi todo es "significativo". Con 1 000, una variable relevante puede no serlo. Además: ¿el signo tiene sentido económico? ¿Es estable en el tiempo?
+"""),
+("md", """
+## 3. La trinidad de tests: Wald, razón de verosimilitud y score
+Para contrastar $H_0: \\beta_j = 0$ (o un conjunto de restricciones):
+
+| Test | Estadístico | Qué modelo requiere |
 |---|---|---|
-| **No rechazo H0** | ✅ Correcto (1 − α) | ❌ **Error tipo II** (β) |
-| **Rechazo H0** | ❌ **Error tipo I** (α) | ✅ Correcto: **potencia** (1 − β) |
+| **Wald** | $W = \\hat\\beta^2 / SE(\\hat\\beta)^2 \\sim \\chi^2_1$ | Solo el modelo completo |
+| **Razón de verosimilitud (LR)** | $LR = 2(\\ell_1 - \\ell_0) \\sim \\chi^2_q$ | Ambos modelos |
+| **Score (Lagrange)** | $S = U(\\beta_0)^\\top I(\\beta_0)^{-1} U(\\beta_0)$ | Solo el modelo restringido |
 
-**Ejemplo de riesgo:** el modelo asigna PD = 2 % al grado A. En el año se observaron 31 incumplimientos en 1 000 clientes.
-- H0: PD real del grado A = 2 % (el modelo está bien calibrado).
-- H1: PD real > 2 % (el modelo **subestima** el riesgo; ésta es la dirección que preocupa al regulador).
+Son asintóticamente equivalentes. En muestras pequeñas, o con coeficientes grandes, el **LR** suele ser el más confiable; el de Wald puede fallar (efecto Hauck-Donner).
 """),
 ("code", """
-n, k, pd0 = 1000, 31, 0.02
-res = stats.binomtest(k, n, pd0, alternative="greater")
-print(f"Tasa observada: {k / n:.2%}   p-valor (binomial exacto, una cola): {res.pvalue:.4f}")
-# valor crítico: ¿a partir de cuántos incumplimientos rechazamos al 5 %?
-k_crit = int(stats.binom.ppf(0.95, n, pd0)) + 1
-print(f"Se rechaza H0 al 5 % si se observan >= {k_crit} incumplimientos")
-
-kk = np.arange(0, 50)
-fig, ax = plt.subplots()
-ax.bar(kk, stats.binom.pmf(kk, n, pd0), color=[ROJO if v >= k_crit else AZUL for v in kk])
-ax.axvline(k, color=ORO, lw=3, label=f"observado = {k}")
-ax.set_title("Distribución de incumplimientos bajo H0 (PD = 2 %): en rojo, la región de rechazo"); ax.legend(); plt.show()
+X0 = sm.add_constant(g[["duration_in_month", "age_in_years"]])
+X1 = sm.add_constant(g[["duration_in_month", "age_in_years", "sin_cuenta_corriente", "ahorro_bajo"]])
+m0 = sm.Logit(g["default"], X0).fit(disp=0)
+m1 = sm.Logit(g["default"], X1).fit(disp=0)
+LR = 2 * (m1.llf - m0.llf); q = X1.shape[1] - X0.shape[1]
+print(f"Modelo restringido: logLik = {m0.llf:.2f} | Modelo completo: logLik = {m1.llf:.2f}")
+print(f"LR = {LR:.2f}, gl = {q}, p-valor = {stats.chi2.sf(LR, q):.2e}")
+# Wald conjunto para las dos variables añadidas
+w = m1.wald_test("sin_cuenta_corriente = 0, ahorro_bajo = 0", scalar=True)
+print(f"Wald conjunto = {w.statistic:.2f}, p-valor = {w.pvalue:.2e}")
+# Score (multiplicador de Lagrange) evaluado en el modelo restringido
+beta0 = np.r_[m0.params.values, 0, 0]
+p0 = 1 / (1 + np.exp(-X1.values @ beta0))
+U = X1.values.T @ (g["default"].values - p0)
+I = X1.values.T @ (X1.values * (p0 * (1 - p0))[:, None])
+S = U @ np.linalg.solve(I, U)
+print(f"Score = {S:.2f}, p-valor = {stats.chi2.sf(S, q):.2e}")
 """),
 ("md", """
-### Potencia: ¿el test es capaz de detectar un modelo descalibrado?
-Si la PD real fuera 3 % (50 % más que lo modelado), ¿con qué probabilidad lo detectaríamos? Depende de **n**.
+### Intervalos de verosimilitud perfilada
+El IC de Wald ($\\hat\\beta \\pm 1{,}96\\,SE$) supone una log-verosimilitud cuadrática. El IC **perfilado** busca los valores de $\\beta_j$ donde la log-verosimilitud máxima (reoptimizando los demás parámetros) cae 1,92 puntos. Es más preciso con muestras pequeñas o eventos raros.
 """),
 ("code", """
-def potencia(n, pd0, pd1, alpha=0.05):
-    kc = stats.binom.ppf(1 - alpha, n, pd0) + 1
-    return 1 - stats.binom.cdf(kc - 1, n, pd1)
-ns = np.array([100, 250, 500, 1000, 2000, 5000, 10000])
-fig, ax = plt.subplots()
-for pd1, c in [(0.025, GRIS), (0.03, AZUL), (0.04, ROJO)]:
-    ax.plot(ns, [potencia(n, 0.02, pd1) for n in ns], marker="o", color=c, label=f"PD real = {pd1:.1%}")
-ax.axhline(0.8, ls="--", color="black", label="Potencia objetivo 80 %"); ax.set_xscale("log")
-ax.set_xlabel("Clientes en el grado (n)"); ax.set_ylabel("Potencia"); ax.legend(); ax.set_title("Potencia del test binomial (H0: PD = 2 %, α = 5 %)"); plt.show()
-"""),
-("code", """
-# Tamaño de muestra (aproximación normal) para detectar pd0 -> pd1 con potencia 80 %
-def n_requerido(pd0, pd1, alpha=0.05, power=0.80):
-    za, zb = stats.norm.ppf(1 - alpha), stats.norm.ppf(power)
-    return int(np.ceil(((za * np.sqrt(pd0 * (1 - pd0)) + zb * np.sqrt(pd1 * (1 - pd1))) / (pd1 - pd0)) ** 2))
-for pd1 in [0.025, 0.03, 0.04]:
-    print(f"Detectar 2 % -> {pd1:.1%}: n ≈ {n_requerido(0.02, pd1):,} clientes")
+j = "sin_cuenta_corriente"
+grid = np.linspace(m1.params[j] - 1.2, m1.params[j] + 1.2, 61)
+perfil = []
+for b in grid:
+    off = b * X1[j]
+    mm = sm.GLM(g["default"], X1.drop(columns=j), family=sm.families.Binomial(), offset=off).fit()
+    perfil.append(mm.llf)
+perfil = np.array(perfil)
+dentro = grid[perfil >= m1.llf - stats.chi2.ppf(0.95, 1) / 2]
+wald_ci = m1.conf_int().loc[j].values
+print(f"IC Wald:      [{wald_ci[0]:.3f}, {wald_ci[1]:.3f}]")
+print(f"IC perfilado: [{dentro.min():.3f}, {dentro.max():.3f}]  (resolución de la grilla: {grid[1] - grid[0]:.3f})")
+plt.plot(grid, perfil - m1.llf, color=AZUL, lw=2); plt.axhline(-1.92, color=ROJO, ls="--"); plt.axvline(m1.params[j], color=GRIS, ls=":")
+plt.title(f"Log-verosimilitud perfilada de β({j})"); plt.xlabel("β"); plt.ylabel("ℓ_perfil − ℓ_máx"); plt.show()
 """),
 ("md", """
-**Lectura de negocio:** en carteras pequeñas o de bajo incumplimiento, un test que "no rechaza" **no prueba** que el modelo esté bien: puede simplemente carecer de potencia. Por eso en validación se combinan tests con juicio experto y benchmarks.
-
-## 2. Tests de validación de modelos de PD
-Entrenamos un modelo simple sobre Taiwán, lo agrupamos en grados de riesgo y lo validamos.
+## 4. AIC, BIC y deviance
+- **Deviance:** $D = -2\\ell$ (relativa al modelo saturado). Las diferencias de deviance entre modelos anidados son el estadístico LR.
+- **AIC** $= -2\\ell + 2k$ y **BIC** $= -2\\ell + k\\log n$: penalizan la complejidad y permiten comparar modelos **no anidados**. El BIC penaliza más y tiende a elegir modelos más simples.
 """),
 ("code", """
-X = tw[["LIMIT_BAL", "AGE", "PAY_0", "PAY_2", "PAY_3", "BILL_AMT1", "PAY_AMT1", "PAY_AMT2"]].copy()
-X["LIMIT_BAL"] = np.log1p(X.LIMIT_BAL); X["BILL_AMT1"] = np.sign(X.BILL_AMT1) * np.log1p(X.BILL_AMT1.abs())
-X["PAY_AMT1"] = np.log1p(X.PAY_AMT1); X["PAY_AMT2"] = np.log1p(X.PAY_AMT2)
-y = tw["default"]
-Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
-clf = LogisticRegression(max_iter=2000).fit(Xtr, ytr)
-pte = clf.predict_proba(Xte)[:, 1]
-val = pd.DataFrame({"y": yte.values, "pd": pte})
-val["grado"] = pd.qcut(val.pd, 7, labels=list("ABCDEFG"))
-tabla = val.groupby("grado", observed=True).agg(n=("y", "size"), defaults=("y", "sum"), pd_media=("pd", "mean"))
-tabla["tasa_obs"] = tabla.defaults / tabla.n
-# Test binomial (una cola, H1: PD real > PD modelo) y test de Jeffreys
-tabla["p_binomial"] = [stats.binomtest(int(r.defaults), int(r.n), r.pd_media, alternative="greater").pvalue for r in tabla.itertuples()]
-tabla["p_jeffreys"] = [stats.beta.cdf(r.pd_media, r.defaults + 0.5, r.n - r.defaults + 0.5) for r in tabla.itertuples()]
-tabla.style.format({"pd_media": "{:.2%}", "tasa_obs": "{:.2%}", "p_binomial": "{:.4f}", "p_jeffreys": "{:.4f}"}).map(
-    lambda v: "background-color:#f8d7da" if isinstance(v, float) and v < 0.05 else "", subset=["p_binomial", "p_jeffreys"])
+candidatos = {
+    "M0: duración + edad": ["duration_in_month", "age_in_years"],
+    "M1: + cuenta y ahorro": ["duration_in_month", "age_in_years", "sin_cuenta_corriente", "ahorro_bajo"],
+    "M2: + historia + cuota": ["duration_in_month", "age_in_years", "sin_cuenta_corriente", "ahorro_bajo", "historia_critica", "installment_rate_in_percentage_of_disposable_income"],
+    "M3: M2 + log(monto)": ["duration_in_month", "age_in_years", "sin_cuenta_corriente", "ahorro_bajo", "historia_critica", "installment_rate_in_percentage_of_disposable_income", "log_monto"],
+}
+res = []
+for nombre, cols in candidatos.items():
+    mm = sm.Logit(g["default"], sm.add_constant(g[cols])).fit(disp=0)
+    res.append({"modelo": nombre, "k": len(cols) + 1, "logLik": mm.llf, "deviance": -2 * mm.llf, "AIC": mm.aic, "BIC": mm.bic, "pseudo_R2": mm.prsquared})
+r = pd.DataFrame(res).set_index("modelo")
+r.style.format({"logLik": "{:.1f}", "deviance": "{:.1f}", "AIC": "{:.1f}", "BIC": "{:.1f}", "pseudo_R2": "{:.3f}"}).highlight_min(subset=["AIC", "BIC"], color="#D8F0E3")
 """),
 ("md", """
-**Lectura:** los grados **A y B subestiman** el riesgo (rechazo en ambos tests), mientras que **C-E lo sobreestiman**. La causa es que el modelo trata `PAY_0` (meses de atraso: −2, −1, 0, 1, 2, …) como una variable **lineal y continua**, cuando su relación con el incumplimiento no es monótona. Es la motivación directa para la **discretización y el WoE** del Módulo 3.
+**Lectura:** M3 agrega `log_monto`, que no es significativo. El AIC casi no cambia y el BIC empeora: la variable no paga su complejidad. En el Módulo 3 veremos la selección de variables de forma sistemática (stepwise, L1, estabilidad).
 
-El **test de Jeffreys** (usado por el BCE en el *backtesting* de PD) calcula $P(PD_{real} \\le PD_{modelo} \\mid \\text{datos})$ con un prior Beta(½, ½): la posterior es $\\text{Beta}(k + ½, n - k + ½)$. Un valor bajo indica que la PD del modelo está **por debajo** de lo que los datos sugieren.
-
-### Hosmer-Lemeshow: calibración global
-$$HL = \\sum_{g=1}^{G} \\frac{(O_g - E_g)^2}{E_g (1 - E_g / n_g)} \\sim \\chi^2_{G-2}$$
-"""),
-("code", """
-val["dec"] = pd.qcut(val.pd, 10, labels=False)
-g = val.groupby("dec").agg(n=("y", "size"), O=("y", "sum"), E=("pd", "sum"))
-HL = (((g.O - g.E) ** 2) / (g.E * (1 - g.E / g.n))).sum()
-print(f"Hosmer-Lemeshow = {HL:.2f}, p-valor = {1 - stats.chi2.cdf(HL, 8):.4f}")
-fig, ax = plt.subplots(figsize=(6, 5))
-ax.plot(g.E / g.n, g.O / g.n, "o-", color=AZUL, label="Deciles"); ax.plot([0, .8], [0, .8], "--", color=GRIS, label="Calibración perfecta")
-ax.set_xlabel("PD media predicha"); ax.set_ylabel("Tasa observada"); ax.set_title("Curva de calibración"); ax.legend(); plt.show()
-"""),
-("md", """
-> **Ojo:** con muestras grandes, HL rechaza casi siempre (alta potencia frente a desviaciones pequeñas). Complementa con la curva de calibración y el juicio sobre la **materialidad** de la desviación.
-
-### Chi-cuadrado: ¿una variable categórica está asociada al incumplimiento?
-"""),
-("code", """
-for col in ["EDUCATION", "MARRIAGE", "SEX"]:
-    ct = pd.crosstab(tw[col], tw["default"])
-    chi2, pval, dof, _ = stats.chi2_contingency(ct)
-    cramer = np.sqrt(chi2 / (ct.values.sum() * (min(ct.shape) - 1)))
-    print(f"{col:10s} chi2={chi2:8.1f}  gl={dof}  p={pval:.2e}  V de Cramér={cramer:.3f}")
-"""),
-("md", """
-Con 30 mil observaciones todo sale "significativo" (p ≈ 0). La **V de Cramér** mide la **magnitud** de la asociación: aquí es pequeña. *Significativo no es lo mismo que importante.*
-
-### Kolmogorov-Smirnov: separación entre buenos y malos
-El **KS** es la máxima distancia entre las distribuciones acumuladas del score de buenos y malos. Es el estadístico de discriminación más reportado en la banca latinoamericana.
-"""),
-("code", """
-ks = stats.ks_2samp(val.loc[val.y == 1, "pd"], val.loc[val.y == 0, "pd"])
-s = np.sort(val.pd.unique())
-cdf_b = np.searchsorted(np.sort(val.loc[val.y == 0, "pd"]), s, side="right") / (val.y == 0).sum()
-cdf_m = np.searchsorted(np.sort(val.loc[val.y == 1, "pd"]), s, side="right") / (val.y == 1).sum()
-i = np.argmax(cdf_b - cdf_m)
-fig, ax = plt.subplots()
-ax.plot(s, cdf_b, color=VERDE, label="Buenos"); ax.plot(s, cdf_m, color=ROJO, label="Malos")
-ax.vlines(s[i], cdf_m[i], cdf_b[i], color="black", lw=2, label=f"KS = {ks.statistic:.3f}")
-ax.set_xlabel("PD predicha"); ax.set_ylabel("Distribución acumulada"); ax.legend(); ax.set_title("Estadístico KS"); plt.show()
-print(f"KS = {ks.statistic:.3f}, p-valor = {ks.pvalue:.2e}")
-"""),
-("md", """
-## 3. Desbalance de clases
-En riesgo minorista la clase "mala" suele ser **minoritaria** (2-10 %). La consecuencia más común es la **paradoja de la exactitud** (*accuracy*).
-"""),
-("code", """
-y_hc = app.TARGET
-print(f"Tasa de malos: {y_hc.mean():.2%}")
-print(f"Un 'modelo' que predice 'nadie incumple' tiene una exactitud de {1 - y_hc.mean():.2%} ... y es inútil.")
-"""),
-("code", """
-# Efecto del submuestreo (undersampling) y de class_weight sobre la CALIBRACIÓN
-Xh = app[["EXT_SOURCE_2", "EXT_SOURCE_3", "AMT_REQ_CREDIT_BUREAU_YEAR"]].fillna(app[["EXT_SOURCE_2", "EXT_SOURCE_3"]].median()).fillna(0)
-Xh["EDAD"] = -app.DAYS_BIRTH / 365.25
-Xa, Xb, ya, yb = train_test_split(Xh, y_hc, test_size=0.3, random_state=0, stratify=y_hc)
-m_base = LogisticRegression(max_iter=2000).fit(Xa, ya)
-m_w = LogisticRegression(max_iter=2000, class_weight="balanced").fit(Xa, ya)
-idx_bad = ya[ya == 1].index; idx_good = ya[ya == 0].sample(len(idx_bad), random_state=0).index
-m_us = LogisticRegression(max_iter=2000).fit(Xa.loc[idx_bad.union(idx_good)], ya.loc[idx_bad.union(idx_good)])
-
-# Corrección de prior (King & Zeng): ajusta el intercepto por la diferencia de tasas
-pi_pob, pi_mues = ya.mean(), 0.5
-p_us = m_us.predict_proba(Xb)[:, 1]
-logit_corr = np.log(p_us / (1 - p_us)) - np.log((pi_mues / (1 - pi_mues)) / (pi_pob / (1 - pi_pob)))
-p_us_corr = 1 / (1 + np.exp(-logit_corr))
-
-comp = []
-for nombre, pp in [("Base (sin balancear)", m_base.predict_proba(Xb)[:, 1]), ("class_weight='balanced'", m_w.predict_proba(Xb)[:, 1]),
-                   ("Undersampling 50/50", p_us), ("Undersampling + corrección de prior", p_us_corr)]:
-    comp.append({"modelo": nombre, "AUC": roc_auc_score(yb, pp), "PD media predicha": pp.mean(), "tasa real": yb.mean(),
-                 "Brier": brier_score_loss(yb, pp), "LogLoss": log_loss(yb, pp)})
-pd.DataFrame(comp).style.format({"AUC": "{:.4f}", "PD media predicha": "{:.2%}", "tasa real": "{:.2%}", "Brier": "{:.4f}", "LogLoss": "{:.4f}"})
-"""),
-("md", """
-**Mensaje clave:** balancear las clases **casi no cambia el AUC** (el ranking), pero **destruye la calibración**: la PD media pasa de ~8 % a ~40 %. En riesgo de crédito la PD **se usa como probabilidad** (provisiones, precio, capital), así que si balanceas, **recalibra**.
-
-## 4. Métricas de clasificación crediticia
-"""),
-("code", """
-p_hc = m_base.predict_proba(Xb)[:, 1]
-fpr, tpr, _ = roc_curve(yb, p_hc); prec, rec, _ = precision_recall_curve(yb, p_hc)
-auc = roc_auc_score(yb, p_hc); ap = average_precision_score(yb, p_hc)
-fig, ax = plt.subplots(1, 2, figsize=(13, 5))
-ax[0].plot(fpr, tpr, color=AZUL, lw=2, label=f"AUC = {auc:.3f} | Gini = {2 * auc - 1:.3f}"); ax[0].plot([0, 1], [0, 1], "--", color=GRIS)
-ax[0].set_xlabel("Tasa de falsos positivos (buenos rechazados)"); ax[0].set_ylabel("Tasa de verdaderos positivos (malos detectados)"); ax[0].set_title("Curva ROC"); ax[0].legend()
-ax[1].plot(rec, prec, color=ROJO, lw=2, label=f"PR-AUC = {ap:.3f}"); ax[1].axhline(yb.mean(), ls="--", color=GRIS, label=f"Azar = {yb.mean():.3f}")
-ax[1].set_xlabel("Recall (malos detectados)"); ax[1].set_ylabel("Precisión (malos entre rechazados)"); ax[1].set_title("Curva Precisión-Recall"); ax[1].legend()
-plt.tight_layout(); plt.show()
-"""),
-("md", """
-| Métrica | Mide | Comentario en riesgo |
-|---|---|---|
-| **AUC / Gini** ($2 \\cdot AUC - 1$) | Capacidad de **ordenar** | Estándar de la industria. Gini > 0.5 suele ser bueno en originación minorista |
-| **KS** | Máxima separación | Muy usado en LatAm; relacionado con el punto de corte |
-| **PR-AUC** | Desempeño en la clase minoritaria | Más informativo cuando la tasa de malos es muy baja |
-| **Brier**, **log-loss** | **Calibración** + discriminación | Indispensables cuando la PD se usa como probabilidad |
-| Precisión / Recall / F1 | Dependen del **corte** | Útiles para la política, no para comparar modelos |
-
-### Punto de corte según costos
-Un crédito malo aprobado cuesta mucho más que un bueno rechazado. Con costo de un falso negativo $C_{FN}$ (pérdida) y de un falso positivo $C_{FP}$ (margen perdido), el corte óptimo teórico para una PD calibrada es:
-$$p^* = \\frac{C_{FP}}{C_{FP} + C_{FN}}$$
-"""),
-("code", """
-C_FN, C_FP = 0.75 * 0.8, 0.55 * 0.15   # LGD x EAD vs. margen perdido (en proporción del monto)
-cortes = np.linspace(0.01, 0.5, 100)
-costo = [(C_FN * ((p_hc < c) & (yb == 1)).sum() + C_FP * ((p_hc >= c) & (yb == 0)).sum()) / len(yb) for c in cortes]
-c_opt = cortes[np.argmin(costo)]
-print(f"Corte teórico p* = {C_FP / (C_FP + C_FN):.3f}   |   corte empírico de mínimo costo = {c_opt:.3f}")
-plt.plot(cortes, costo, color=AZUL, lw=2); plt.axvline(c_opt, color=ROJO, ls="--"); plt.xlabel("Corte de PD (rechazar si PD >= corte)"); plt.ylabel("Costo esperado por solicitud"); plt.title("Corte por costos"); plt.show()
-
-pred = (p_hc >= c_opt).astype(int)
-cm = confusion_matrix(yb, pred)
-print(pd.DataFrame(cm, index=["Real bueno", "Real malo"], columns=["Aprobado", "Rechazado"]))
-print(classification_report(yb, pred, target_names=["bueno", "malo"], digits=3))
-"""),
-("md", """
 ## 5. Ejercicios
-1. Con el grado de mayor riesgo del modelo de Taiwán, calcula la potencia de detectar un aumento de 20 % en su PD.
-2. Recalcula el test de Jeffreys **por grado** usando la PD predicha + 1 pp. ¿Cuántos grados rechazan?
-3. ¿Cambia el corte óptimo si el margen perdido sube a 25 %? Interprétalo en términos de **apetito de riesgo**.
-4. Compara el KS y el Gini del modelo en entrenamiento vs. prueba. ¿Hay sobreajuste?
-
----
-**Cierre del Módulo 2:** ya contamos con el lenguaje probabilístico (Bernoulli, verosimilitud, inferencia, métricas). En el **Módulo 3** lo convertiremos en una herramienta de decisión: **regresión logística y scorecards**.
+1. Agrega `age_in_years²` al modelo M2. Haz el test LR a mano. ¿Se justifica la curvatura?
+2. Calcula el IC perfilado de `historia_critica` y compáralo con el de Wald.
+3. ¿Qué modelo elegirías con AIC y cuál con BIC? ¿Por qué pueden diferir?
+4. **Reto:** demuestra que para la logística el Hessiano es $-X^\\top W X$ con $W = \\text{diag}(p_i(1-p_i))$.
 """),
 ]
 
-build(f"{M2}/notebooks/M02_S03_Pruebas_de_Hipotesis_Desbalance_y_Metricas.ipynb",
-      "Módulo 2 · Sesión 3: Pruebas de hipótesis, desbalance de clases y métricas de clasificación",
-      "Laboratorio: errores tipo I/II, potencia, tests binomial/Jeffreys/HL/KS/χ², calibración vs. balanceo y punto de corte",
+build(f"{M2}/notebooks/M02_S03_Verosimilitud_Inferencia_y_Lectura_de_Resultados.ipynb",
+      "Módulo 2 · Sesión 3: Verosimilitud, inferencia y lectura de resultados estadísticos",
+      "Laboratorio: MLE, Fisher y Hessiano, tests de Wald/LR/score, IC perfilados, AIC/BIC y salida de statsmodels",
       cells)

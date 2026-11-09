@@ -4,24 +4,24 @@ const OUT = process.argv[2];
 const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
 
 (async () => {
-  const D = L.newDeck({ title: "M1 S2 - Calidad de cartera, provisiones y rentabilidad", footer: "DataBank Academy · Módulo 1 · Sesión 2 · Calidad de cartera, pérdidas, provisiones y rentabilidad" });
+  const D = L.newDeck({ title: "M1 S2 - Calidad de cartera, provisiones y rentabilidad", footer: "DataBank Academy · Módulo 1 · Sesión 2 · Indicadores, provisiones, capital y RAROC" });
   D.sec("Apertura");
-  L.sTitle(D, { kicker: "MÓDULO 1 · SESIÓN 2 DE 3", title: "Calidad de cartera, pérdidas, provisiones y rentabilidad",
+  L.sTitle(D, { kicker: "MÓDULO 1 · SESIÓN 2 DE 4", title: "Indicadores de cartera, provisiones, capital y rentabilidad ajustada por riesgo",
     subtitle: "Medir bien antes de modelar: los indicadores que mira un comité de riesgos", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
     notes: "Recapitular la sesión 1 en un minuto: ciclo, apetito, curva de estrategia. Hoy medimos el resultado de esas decisiones en la cartera." });
   L.sAgenda(D, { items: [
     { t: "Indicadores de calidad de cartera", d: "Stock, flujo, adelantados y rentabilidad", min: 20 },
     { t: "Las trampas de la mora contable", d: "Efecto denominador, castigos, mora ajustada y rezagada", min: 15 },
-    { t: "Provisiones y costo de riesgo", d: "Categorías SBS, cobertura y el puente hacia IFRS 9", min: 20 },
+    { t: "Provisiones y costo de riesgo", d: "Categorías SBS, cobertura y el puente hacia NIIF 9", min: 20 },
     { t: "Cosechas y roll rates", d: "Indicadores adelantados y dinámica de la morosidad", min: 20 },
-    { t: "P&L de riesgo por producto", d: "Margen, pérdida y contribución", min: 10 },
-    { t: "Laboratorio", d: "Indicadores desde un panel crédito-mes de 16 mil créditos", min: 35, lab: true },
+    { t: "P&L, capital, precio mínimo y RAROC", d: "De la pérdida esperada a la rentabilidad ajustada por riesgo", min: 20 },
+    { t: "Laboratorio", d: "Indicadores, provisiones, cosechas y RAROC desde un panel crédito-mes", min: 30, lab: true },
   ] });
   L.sCards(D, { title: "Al terminar la sesión podrás", cols: 2, cards: [
     { h: "Calcular los indicadores SBS", t: "Cartera atrasada, mora por tramos, cartera pesada, castigos y cobertura desde datos crédito-mes." },
     { h: "Leer la mora con sentido crítico", t: "Separar el riesgo real del efecto del crecimiento y de los castigos." },
     { h: "Conectar riesgo y contabilidad", t: "Calcular provisiones por categoría SBS y el costo de riesgo." },
-    { h: "Anticipar el deterioro", t: "Usar cosechas y roll rates como señales adelantadas, y evaluar la rentabilidad por producto." },
+    { h: "Anticipar y valorar", t: "Usar cosechas y roll rates como señales adelantadas, y conectar pérdida esperada, capital, precio y RAROC." },
   ] });
 
   L.sSection(D, { num: 1, title: "Indicadores de calidad de cartera", sub: "Qué medimos, cómo se calcula y qué esconde cada indicador" });
@@ -42,7 +42,7 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
     { h: "Stock", t: "¿Cómo está la cartera hoy? Mora, cartera pesada, cobertura. Fácil de comunicar, pero rezagado y manipulable por castigos y crecimiento." },
     { h: "Flujo", t: "¿Cuánto perdimos en el período? Castigos, gasto de provisiones, costo de riesgo. Se conecta directo con el P&L." },
     { h: "Adelantados", t: "¿Cómo se comportan las originaciones recientes? Cosechas, FPD, roll rates, entradas a mora." },
-    { h: "Rentabilidad", t: "¿El precio paga el riesgo? Margen ajustado por pérdida, contribución y RAROC (Módulo 8)." },
+    { h: "Rentabilidad", t: "¿El precio paga el riesgo? Margen ajustado por pérdida, contribución y RAROC (Módulo 10)." },
   ], notes: "Un buen tablero combina las cuatro familias. Mostrar sólo stock es la causa más frecuente de sorpresas." });
 
   L.sSection(D, { num: 2, title: "Las trampas de la mora contable", sub: "Crecimiento y castigos pueden maquillar el riesgo" });
@@ -79,9 +79,9 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
     where: [["ΔProvisiones", "Variación del stock de provisiones en el período"], ["Castigos", "Saldo retirado del balance (ya provisionado al 100 %)"], ["Recuperos", "Cobros sobre cartera castigada"], ["Colocaciones prom.", "Saldo promedio del período (anualizar si es mensual)"]],
     example: { h: "Por qué importa", t: ["Es el gasto que golpea la utilidad", "Es comparable con la tasa y el margen", "Es la versión contable de la pérdida esperada", "En el caso pasó de ~15 % (2023) a < 5 % (2025)"] },
     notes: "En la práctica, el costo de riesgo se compara con el spread del producto: si el spread es 20 % y el costo de riesgo 15 %, queda muy poco para cubrir costos y capital." });
-  L.sCompare(D, { title: "Provisiones SBS vs. pérdida esperada IFRS 9", left: { h: "Regulatoria SBS", icon: "S", items: ["Basada en categorías por días de atraso", "Tasas mínimas fijas por categoría y tipo de crédito", "Enfoque de pérdida incurrida + componente procíclico", "Simple, comparable y auditable"] },
-    right: { h: "IFRS 9 (ECL)", icon: "E", items: ["ECL = Σ PD × LGD × EAD × descuento", "Stage 1: 12 meses; Stages 2 y 3: vida del crédito", "Prospectiva: escenarios macroeconómicos ponderados", "Requiere modelos de PD, LGD y EAD (Módulo 7)"] },
-    verdict: "hoy medimos lo que ya pasó; en el Módulo 7 mediremos lo que esperamos que pase, con escenarios y staging." });
+  L.sCompare(D, { title: "Provisiones SBS vs. pérdida esperada NIIF 9", left: { h: "Regulatoria SBS", icon: "S", items: ["Basada en categorías por días de atraso", "Tasas mínimas fijas por categoría y tipo de crédito", "Enfoque de pérdida incurrida + componente procíclico", "Simple, comparable y auditable"] },
+    right: { h: "NIIF 9 (ECL)", icon: "E", items: ["ECL = Σ PD × LGD × EAD × descuento", "Stage 1: 12 meses; Stages 2 y 3: vida del crédito", "Prospectiva: escenarios macroeconómicos ponderados", "Requiere modelos de PD, LGD y EAD (Módulo 9)"] },
+    verdict: "hoy medimos lo que ya pasó; en el Módulo 9 mediremos lo que esperamos que pase, con escenarios y staging." });
 
   L.sSection(D, { num: 4, title: "Cosechas y roll rates", sub: "Indicadores adelantados: ver el deterioro antes que la mora" });
   L.sFlow(D, { title: "Cómo se construye un análisis de cosechas", steps: [
@@ -106,7 +106,7 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
     rows: rr.rows.map((r, i) => [r, ...rr.values[i].map((x, j) => ({ text: x > 0 ? pct(x) : "–", options: { fill: { color: heat(x, j) }, align: "center", bold: false } }))]),
     side: ["Verde (columna 0): cura", "Rojo a la derecha de la diagonal: roll forward", "Diagonal: se mantiene en el tramo", "En tramos tardíos casi todo avanza a castigo"],
     note: "Ventana jul-2025 a jun-2026, consumo, en número de créditos. Fuente: notebook M01_S02, sección 5.",
-    notes: "La matriz es una cadena de Markov: multiplicando las tasas forward se obtiene la probabilidad de que un crédito al día termine castigado. Es la intuición detrás de las matrices de transición del Módulo 7." });
+    notes: "La matriz es una cadena de Markov: multiplicando las tasas forward se obtiene la probabilidad de que un crédito al día termine castigado. Es la intuición detrás de las matrices de transición del Módulo 9." });
   const r = rr.values; const fwd = [r[0][1], r[1][2], r[2][3], r[3][4], r[4][5], r[5][6]];
   const acum = fwd.reduce((a, b) => a * b, 1);
   L.sStats(D, { title: "Lo que dicen las roll rates", stats: [
@@ -114,7 +114,7 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
     { v: pct(r[1][0], 0), l: "de los que están en 1-30 se cura al mes siguiente", color: L.HEX.green },
     { v: pct(r[2][3], 0), l: "de 31-60 rueda a 61-90: allí la cobranza ya llega tarde" },
     { v: pct(fwd.slice(1).reduce((a, b) => a * b, 1), 0), l: "de lo que entra a 1-30 termina castigado si nada cambia", color: L.HEX.gold },
-  ], points: ["La cobranza temprana (1-30) es la palanca más barata: cada punto de cura evita una cadena de roll forwards", "Prob. de que un crédito al día termine castigado ≈ " + pct(acum, 2) + " mensual: dato base para la PD de vida (Módulo 7)"] });
+  ], points: ["La cobranza temprana (1-30) es la palanca más barata: cada punto de cura evita una cadena de roll forwards", "Prob. de que un crédito al día termine castigado ≈ " + pct(acum, 2) + " mensual: dato base para la PD de vida (Módulo 9)"] });
 
   L.sSection(D, { num: 5, title: "El P&L de riesgo por producto", sub: "¿El precio paga la pérdida?" });
   const pl = J.m1s2_pl;
@@ -123,22 +123,39 @@ const pct = (v, d = 1) => `${(v * 100).toFixed(d).replace(".", ",")} %`;
       opts: { barGrouping: "clustered", showLegend: true, valAxisLabelFormatCode: "0%", chartColors: [L.HEX.navy, L.HEX.slate, L.HEX.gold, L.HEX.crimson, L.HEX.green], valAxisTitle: "% del saldo promedio (12 meses)", showValAxisTitle: true } },
     points: [`Tarjeta: la mayor pérdida (${pct(pl.perdida[0])}) y la mayor contribución (${pct(pl.contrib[0])})`, `Hipotecario: pérdida mínima, pero contribución de ${pct(pl.contrib[4])} sobre el saldo`, "La pregunta correcta: ¿el margen paga la pérdida, el costo y el capital?"],
     source: "Supuestos: fondeo 5,5 %; costo operativo por producto entre 1,2 % y 9 %. Notebook M01_S02, sección 6.",
-    notes: "El hipotecario parece poco rentable por saldo, pero consume poco capital y fideliza. Esto anticipa RAROC (Módulo 8): la rentabilidad debe medirse contra el capital, no sólo contra el saldo." });
+    notes: "El hipotecario parece poco rentable por saldo. La siguiente sección lo confirma con RAROC: la rentabilidad debe medirse contra el capital, no solo contra el saldo." });
 
+  L.sFormula(D, { title: "De la pérdida esperada a la rentabilidad ajustada por riesgo", formula: "RAROC = (Ingreso − Fondeo − Costo operativo − EL) · (1 − t) / Capital", fsize: 26,
+    where: [["EL = PD·LGD·EAD", "Pérdida esperada: se cubre con provisiones y debe estar en el precio"], ["Capital (K)", "Pérdida inesperada al 99,9 %: fórmula IRB de Basilea para minorista"], ["t", "Impuesto a la renta (29,5 % en el Perú)"], ["Tasa mínima", "Fondeo + costos + EL + costo de capital × K / (1 − t)"]],
+    example: { h: "Supuestos del caso", t: ["PD a 12 meses through-the-cycle (promedio de 6 fechas)", "LGD = 1 − recupero post-castigo", "ρ: 4 % revolvente, 15 % hipotecario, 3-16 % otros minoristas", "Costo de capital: 15 %; fondeo: 5,5 %"] },
+    notes: "Usar PD through-the-cycle es clave: con solo el año benigno 2025 la PD de tarjeta sería 2,8 % y el capital quedaría muy subestimado. La tabla de PD por fecha de inicio del notebook muestra la PD de tarjeta pasando de 19 % (2022-12) a 2,8 % (2025-06)." });
+  L.sTable(D, { title: "Rentabilidad ajustada por riesgo por producto", colW: [2.6, 1.15, 1.1, 1.1, 1.1, 1.25, 1.35, 1.25, 1.23], rowH: 0.62, fsize: 13,
+    header: ["Producto", "PD TTC", "LGD", "EL", "Capital", "Costo op.", "Tasa cobrada", "Tasa mínima", "RAROC"],
+    rows: [["Tarjeta", "7,9 %", "79 %", "6,2 %", "10,2 %", "20 %", "56,0 %", "33,9 %", { text: "168 %", options: { color: L.HEX.green, bold: true } }],
+      ["Consumo NR", "4,6 %", "79 %", "3,6 %", "9,3 %", "9 %", "32,8 %", "20,1 %", { text: "112 %", options: { color: L.HEX.green, bold: true } }],
+      ["Microempresa", "7,2 %", "78 %", "5,7 %", "9,7 %", "14 %", "36,3 %", "27,2 %", { text: "81 %", options: { color: L.HEX.green, bold: true } }],
+      ["Vehicular", "2,1 %", "62 %", "1,3 %", "6,5 %", "3 %", "12,0 %", "11,2 %", { text: "24 %", options: { color: L.HEX.gold, bold: true } }],
+      ["Hipotecario", "0,8 %", "64 %", "0,5 %", "5,5 %", "1,5 %", "7,8 %", "8,7 %", { text: "4 %", options: { color: L.HEX.crimson, bold: true } }]],
+    note: "RAROC después de impuestos frente a un costo de capital de 15 %. Fuente: notebook M01_S02, sección 7 (datos sintéticos).",
+    notes: "El hipotecario tiene la menor pérdida pero el peor RAROC: su tasa no cubre el costo del capital que consume. En la práctica se justifica por fidelización y venta cruzada (valor de vida del cliente, Módulo 10)." });
+  L.sChart(D, { title: "¿El precio paga fondeo, costos, pérdida esperada y capital?", chart: { type: "bar", labels: ["Tarjeta", "Consumo NR", "Microempresa", "Vehicular", "Hipotecario"],
+      series: [{ name: "Tasa cobrada", values: [0.560, 0.328, 0.363, 0.120, 0.078] }, { name: "Tasa mínima (RAROC = 15 %)", values: [0.339, 0.201, 0.272, 0.112, 0.087] }],
+      opts: { barGrouping: "clustered", showLegend: true, showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: "0%", valAxisLabelFormatCode: "0%", chartColors: [L.HEX.navy, L.HEX.gold] } },
+    points: ["La pérdida esperada se cubre con provisiones y precio", "La inesperada se cubre con capital, y el capital tiene un costo que el precio también debe pagar", "Un RAROC menor al costo de capital destruye valor aunque la contribución contable sea positiva"] });
   D.sec("Laboratorio y cierre");
   L.sLab(D, { notebook: "M01_S02_Calidad_de_Cartera_Provisiones_y_Rentabilidad.ipynb", data: ["cartera_panel_mensual.csv.gz", "16 000 créditos · panel mensual", "2022-01 a 2026-09", "sbs_categorias_provisiones_consumo.csv", "macro_peru_ilustrativa.csv"], steps: [
     { h: "El panel crédito-mes", t: "La vida de un crédito: atraso, castigo y recuperos" },
     { h: "Indicadores y sus trampas", t: "Mora contable, ajustada y rezagada; relación con el ciclo macro" },
     { h: "Provisiones SBS", t: "Categorías, cobertura y costo de riesgo" },
     { h: "Cosechas y roll rates", t: "Curvas ever 60+, triángulo por MOB y matriz de transición" },
-    { h: "P&L por producto", t: "Margen, pérdida neta y contribución" },
+    { h: "P&L y RAROC", t: "Contribución, PD through-the-cycle, capital IRB, tasa mínima y RAROC" },
   ] });
   L.sTakeaways(D, { items: [
     "La mora contable es un indicador rezagado y manipulable: compleméntala con la ajustada, la rezagada y las cosechas.",
     "El costo de riesgo conecta la calidad de cartera con el P&L y se compara directamente con el margen.",
-    "Las provisiones SBS miden lo incurrido por categoría; IFRS 9 exigirá medir lo esperado.",
+    "Las provisiones SBS miden lo incurrido por categoría; NIIF 9 exigirá medir lo esperado.",
     "Cosechas y roll rates muestran el deterioro meses antes que la mora.",
-    "La rentabilidad por producto, no la mora, decide dónde crecer.",
-  ], next: "organización, segmentación, indicadores del ciclo y gobierno del riesgo." });
+    "La rentabilidad por producto, medida con RAROC y no con la mora, decide dónde crecer.",
+  ], next: "segmentación, concentración, crecimiento, alertas tempranas y cobranza." });
   await L.save(D, OUT);
 })();

@@ -4,34 +4,50 @@ const OUT = process.argv[2];
 const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
 
 (async () => {
-  const D = L.newDeck({ title: "M1 S1 - Ciclo de vida del crédito y apetito de riesgo", footer: "DataBank Academy · Módulo 1 · Sesión 1 · Ciclo de vida del crédito y apetito de riesgo" });
+  const D = L.newDeck({ title: "M1 S1 - Ciclo de vida del crédito y apetito de riesgo", footer: "DataBank Academy · Módulo 1 · Sesión 1 · Crédito minorista: ciclo de vida, apetito y políticas" });
   D.sec("Apertura");
-  L.sTitle(D, { kicker: "MÓDULO 1 · SESIÓN 1 DE 3", title: "Ciclo de vida del crédito, originación y apetito de riesgo",
+  L.sTitle(D, { kicker: "MÓDULO 1 · SESIÓN 1 DE 4", title: "Crédito minorista: ciclo de vida, apetito de riesgo y políticas",
     subtitle: "Gestión integral del riesgo de crédito minorista", meta: "Programa Ejecutivo en Gestión Integral del Riesgo de Crédito Minorista · DataBank Academy · 2027",
     notes: "Bienvenida al programa. Presentación del docente y de la dinámica: cada sesión de 2 horas combina unos 60 minutos de fundamentos y discusión con 50-60 minutos de laboratorio en Python. Este primer módulo es el lenguaje de negocio: todo lo que modelemos después tiene que terminar en una decisión de aprobación, provisión, precio o gestión de cartera." });
   L.sAgenda(D, { items: [
-    { t: "Por qué una gestión integral", d: "Las decisiones de un equipo de riesgo y la cartera minorista peruana", min: 15 },
-    { t: "El ciclo de vida del crédito", d: "Originación, seguimiento, cobranza y recuperación", min: 20 },
+    { t: "Qué hace distinto al crédito minorista", d: "Frente al corporativo y pyme; las decisiones de un equipo de riesgo", min: 15 },
+    { t: "El ciclo de vida completo", d: "Del diseño del producto al cierre", min: 15 },
     { t: "Apetito de riesgo y punto de corte", d: "Del marco de apetito a la curva de estrategia y la rentabilidad", min: 25 },
-    { t: "Políticas de admisión, límites y excepciones", d: "Filtros, capacidad de pago, matriz de decisión y overrides", min: 20 },
-    { t: "Laboratorio", d: "Embudo, curva de estrategia, RCI y excepciones sobre 60 mil solicitudes", min: 40, lab: true },
+    { t: "Políticas, límites, facultades y excepciones", d: "Filtros, capacidad de pago, matriz de decisión, autonomías y overrides", min: 25 },
+    { t: "Laboratorio", d: "Concentración, embudo, curva de estrategia, RCI, excepciones y facultades", min: 40, lab: true },
   ], notes: "Tiempos referenciales para 120 minutos. El laboratorio puede intercalarse: después de la sección 3 se ejecutan los bloques 1-3 del notebook y al final los bloques 4-5." });
   L.sCards(D, { title: "Al terminar la sesión podrás", cols: 2, cards: [
-    { h: "Recorrer el ciclo completo", t: "Identificar qué decisión, qué dato y qué modelo intervienen en cada etapa del crédito." },
+    { h: "Distinguir el crédito minorista", t: "Explicar por qué se gestiona con modelos y portafolios, y recorrer el ciclo de vida completo." },
     { h: "Traducir apetito en política", t: "Convertir una tolerancia de pérdida en un punto de corte usando la curva de estrategia." },
     { h: "Combinar voluntad y capacidad", t: "Diseñar una matriz de decisión que cruce el score con la relación cuota/ingreso." },
-    { h: "Gobernar las excepciones", t: "Medir el costo de los overrides y proponer límites y alertas para el comité." },
+    { h: "Gobernar facultades y excepciones", t: "Diseñar autonomías, medir el costo de los overrides y proponer límites para el comité." },
   ], notes: "Enfatizar que son objetivos de decisión, no de software." });
 
-  L.sSection(D, { num: 1, title: "Por qué una gestión integral", sub: "Riesgo, crecimiento y rentabilidad son la misma conversación", notes: "Transición." });
+  L.sSection(D, { num: 1, title: "Qué hace distinto al crédito minorista", sub: "Granularidad, automatización y gestión por portafolio" });
+  L.sTable(D, { title: "Minorista vs. pyme vs. corporativo", colW: [2.6, 3.4, 2.9, 3.23], rowH: 0.62,
+    header: ["Dimensión", "Minorista", "Pyme", "Corporativo"],
+    rows: [["Deudores", "Cientos de miles o millones", "Miles a decenas de miles", "Decenas a cientos"],
+      ["Exposición individual", "Pequeña: ninguna amenaza al banco", "Media", "Grande: concentración"],
+      ["Información", "Solicitud, buró, transaccional", "EEFF parciales + buró", "EEFF auditados, rating externo"],
+      ["Decisión", "Automatizada: score + políticas + motor", "Mixta: score + analista", "Analista y comité, caso a caso"],
+      ["Gestión del riesgo", "Estadística, por portafolio y cosechas", "Mixta", "Individual: rating y covenants"],
+      ["Basilea", "Cartera minorista, correlaciones bajas", "Minorista si la exposición es pequeña", "Corporativa, correlación alta"]],
+    notes: "La pyme es un punto intermedio: las más pequeñas se gestionan como minoristas (score + política), las más grandes como corporativas." });
+  L.sStats(D, { title: "Granularidad: la misma suma de dinero, otro problema de riesgo", stats: [
+    { v: "60 060", l: "deudores en la cartera minorista del caso", color: L.HEX.navy },
+    { v: "0,3 %", l: "del saldo en los 10 mayores deudores minoristas", color: L.HEX.green },
+    { v: "150", l: "deudores en una cartera corporativa simulada", color: L.HEX.navy },
+    { v: "≈ 35 %", l: "del saldo en sus 10 mayores deudores" },
+  ], points: ["En minorista el riesgo individual se diversifica: lo que importa son las tasas por segmento (PD, LGD) y el ciclo económico", "Por eso se gestiona con modelos, políticas, motores de decisión y análisis de portafolio"],
+    notes: "Valores del notebook M01_S01, sección 0 (HHI y número equivalente de deudores). La cifra corporativa depende de la simulación lognormal." });
   L.sCards(D, { title: "Seis decisiones que toma un equipo de riesgo minorista", cols: 3, cards: [
     { h: "¿A quién prestar?", t: "Admisión: score, políticas, filtros y verificación." },
     { h: "¿Cuánto prestar?", t: "Monto o línea según capacidad de pago y endeudamiento." },
     { h: "¿A qué precio?", t: "Tasa que cubra fondeo, costos, pérdida esperada y capital." },
     { h: "¿Cómo seguir la cartera?", t: "Alertas, comportamiento, gestión de líneas y renovaciones." },
     { h: "¿Cómo cobrar y recuperar?", t: "Estrategias por tramo, refinanciación, castigo y venta de cartera." },
-    { h: "¿Cuánto provisionar?", t: "Provisiones regulatorias (SBS) y pérdida esperada (IFRS 9)." },
-  ], notes: "Cada decisión corresponde a módulos del programa: admisión (M3-M7), precio (M8), cartera y cobranza (M9), provisiones (M7). La idea de 'integral' es que optimizar una decisión aislada (por ejemplo, aprobar más) mueve las demás (provisiones, cobranza, capital)." });
+    { h: "¿Cuánto provisionar?", t: "Provisiones regulatorias (SBS) y pérdida esperada (NIIF 9)." },
+  ], notes: "Cada decisión corresponde a módulos del programa: admisión (M3-M8), provisiones (M9), precio (M10), cartera y cobranza (M11). La idea de 'integral' es que optimizar una decisión aislada (por ejemplo, aprobar más) mueve las demás (provisiones, cobranza, capital)." });
   L.sTable(D, { title: "La cartera minorista: productos con lógicas de riesgo distintas", colW: [2.7, 2.0, 1.9, 1.9, 1.9, 1.73],
     header: ["Tipo de crédito (SBS)", "Ticket típico", "Plazo", "Tasa", "Riesgo", "Garantía"],
     rows: [
@@ -44,14 +60,18 @@ const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
     ], rowH: 0.55, note: "La Res. SBS N.° 11356-2008 clasifica la cartera en 8 tipos de crédito; el minorista abarca consumo (revolvente y no revolvente), hipotecario, micro y pequeña empresa.",
     notes: "Mensaje: no hay 'un' riesgo minorista. La tarjeta tiene mora alta pero tasa alta; el hipotecario tiene mora baja pero plazos muy largos y riesgo de concentración en el ciclo inmobiliario. Pregunta rápida: ¿qué producto tiene la mayor pérdida esperada por sol prestado? ¿Y el mayor capital?" });
 
-  L.sSection(D, { num: 2, title: "El ciclo de vida del crédito", sub: "Originación → seguimiento → cobranza → recuperación" });
-  L.sFlow(D, { title: "Cuatro etapas, cuatro preguntas", steps: [
-    { h: "Originación", t: ["¿Aprobamos? ¿Cuánto y a qué precio?", "Score de admisión, políticas, capacidad de pago", "KPI: aprobación, 30@3, 60@6"] },
-    { h: "Seguimiento", t: ["¿La cartera viva se deteriora?", "Score de comportamiento, alertas tempranas, gestión de líneas", "KPI: entradas a mora, migraciones"] },
-    { h: "Cobranza", t: ["¿Cómo contener la mora?", "Estrategias por tramo y segmento, contactabilidad", "KPI: roll rates, tasa de cura"] },
-    { h: "Recuperación", t: ["¿Cuánto recuperamos?", "Refinanciación, judicial, castigo, venta de cartera", "KPI: recupero, LGD"] },
-  ], note: "cada etapa genera los datos que alimentan los modelos de la siguiente: el ciclo es un sistema, no una secuencia de áreas.",
-    notes: "Usar el ejemplo de una tarjeta: se aprueba con un score de originación; a los 6 meses se le sube la línea con un score de comportamiento; si cae en mora, se gestiona con un score de cobranza; si se castiga, el recupero define la LGD que se usará para provisionar y fijar precios de las nuevas aprobaciones. El ciclo se cierra." });
+  L.sSection(D, { num: 2, title: "El ciclo de vida completo del crédito", sub: "Del diseño del producto al cierre" });
+  L.sTable(D, { title: "Siete etapas, siete decisiones", colW: [2.3, 4.9, 4.93], rowH: 0.6,
+    header: ["Etapa", "Decisiones clave", "Datos y herramientas"],
+    rows: [["Diseño del producto", "Mercado objetivo, monto, plazo, tasa, garantías, canal", "Pricing ajustado por riesgo, simulación de P&L"],
+      ["Originación", "Captación, canales, preaprobados", "Campañas, scores de propensión, prescreening"],
+      ["Admisión", "Aprobar o rechazar, monto, tasa", "Score, políticas, capacidad de pago, verificación"],
+      ["Seguimiento", "Líneas, renovaciones, alertas", "Score de comportamiento, alerta temprana, watchlist"],
+      ["Cobranza", "Contacto, refinanciamiento, reestructuración", "Score de cobranza, estrategias por tramo, curación"],
+      ["Recuperación", "Judicial, castigo, venta de cartera", "LGD, recuperos, costos"],
+      ["Cierre", "Cancelación, liberación de garantías, castigo final", "Cosechas cerradas, rentabilidad realizada"]],
+    note: "El cierre retroalimenta el diseño: la rentabilidad realizada de una cosecha es la prueba de que el producto estaba bien diseñado.",
+    notes: "Cada etapa genera los datos que alimentan los modelos de la siguiente: el ciclo es un sistema, no una secuencia de áreas. Ejemplo de una tarjeta: se diseña con un pricing que supone una pérdida; se aprueba con un score; se gestiona la línea con comportamiento; si cae en mora, se cobra; si se castiga, el recupero define la LGD; al cerrar la cosecha se compara la rentabilidad realizada con la diseñada." });
   L.sFlow(D, { title: "El embudo de originación", lead: "Cada capa filtra volumen y debería filtrar riesgo. Si no reduce riesgo, sólo destruye negocio.", steps: [
     { h: "Solicitud", t: ["Canal: agencia, digital, fuerza de ventas, retail", "Datos declarados + buró"] },
     { h: "Filtros duros", t: ["Edad, ingreso mínimo", "Calificación RCC SBS", "Listas negras y fraude"] },
@@ -65,8 +85,8 @@ const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
     { h: "Score de originación (application)", t: ["Información de la solicitud y del buró", "Clientes nuevos: poca o ninguna historia interna", "Decide aprobación, monto y precio"] },
     { h: "Score de comportamiento (behavior)", t: ["Uso, pagos y saldos de los últimos meses", "Gestión de líneas, renovaciones y venta cruzada", "Insumo para provisiones (PD de cartera viva)"] },
     { h: "Score de cobranza (collection)", t: ["Probabilidad de cura o de roll forward", "Prioriza la gestión y el canal de contacto", "Optimiza la capacidad del call center"] },
-    { h: "Modelos de pérdida (LGD, EAD)", t: ["Cuánto se pierde si incumple y con qué exposición", "Provisiones IFRS 9, pricing y capital", "Módulo 7"] },
-  ], notes: "Mencionar que en el programa construiremos sobre todo modelos de PD (originación), y en el Módulo 7 completaremos la tríada PD-LGD-EAD." });
+    { h: "Modelos de pérdida (LGD, EAD)", t: ["Cuánto se pierde si incumple y con qué exposición", "Provisiones NIIF 9, pricing y capital", "Módulo 9"] },
+  ], notes: "Mencionar que en el programa construiremos sobre todo modelos de PD (originación), y en el Módulo 9 completaremos la tríada PD-LGD-EAD." });
   L.sQuestion(D, { q: "Si sólo pudieras invertir en mejorar una etapa del ciclo este año, ¿cuál elegirías y por qué?",
     hint: "Considera dónde se origina la pérdida (admisión) frente a dónde se contiene (cobranza), y qué etapa tiene hoy menos datos y menos modelos en tu institución.",
     notes: "Dinámica de 5 minutos. Recoger 3-4 respuestas. No hay respuesta única: en carteras de rápido crecimiento suele ser originación; en carteras maduras, cobranza temprana." });
@@ -107,7 +127,7 @@ const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
   L.sFormula(D, { title: "Del apetito en tasa de malos a la rentabilidad", formula: "Contribución ≈ S̄ · (r − r_f − c_op) − 𝟙_D · LGD · EAD",
     where: [["S̄", "Saldo promedio durante la vida del crédito (≈ 55 % del monto)"], ["r − r_f − c_op", "Tasa activa menos fondeo y costo operativo (28 % − 6 % − 7 %)"], ["𝟙_D", "Indicador de incumplimiento (1 si el cliente incumple)"], ["LGD · EAD", "Pérdida si incumple: 75 % de una exposición de 80 % del monto"]],
     example: { h: "PD de equilibrio", t: ["Margen: 0,55 × 15 % = 8,25 % del monto", "Pérdida si incumple: 0,75 × 0,80 = 60 %", "PD de equilibrio ≈ 8,25 / 60 ≈ 13,8 %", "Clientes con PD > 13,8 % destruyen valor… antes del capital"] },
-    notes: "Ésta es una versión simplificada de la ecuación de pricing del Módulo 8. Sirve para mostrar que el corte óptimo depende de la tasa: si la tasa sube, la PD de equilibrio sube y el corte rentable baja." });
+    notes: "Ésta es una versión simplificada de la ecuación de pricing del Módulo 10. Sirve para mostrar que el corte óptimo depende de la tasa: si la tasa sube, la PD de equilibrio sube y el corte rentable baja." });
   const ut = J.m1s1_utilidad; const iMax = ut.values.indexOf(Math.max(...ut.values));
   L.sChart(D, { title: "El corte rentable no siempre coincide con el apetito", chart: { type: "line", labels: ut.labels, series: [{ name: "Utilidad (S/ MM)", values: ut.values }],
       opts: { lineSize: 3, lineDataSymbol: "circle", lineDataSymbolSize: 5, chartColors: [L.HEX.green], valAxisTitle: "Contribución total (S/ MM)", showValAxisTitle: true, catAxisTitle: "Punto de corte del score", showCatAxisTitle: true } },
@@ -141,6 +161,13 @@ const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
     right: { h: "High-side override", icon: "H", items: ["Se rechaza a quien la política aprueba", "Costo: volumen y clientes buenos perdidos", "Típico: información cualitativa o desconfianza en el score", "Control: medir la tasa de malos de los rechazados por excepción"] },
     verdict: "toda excepción debe ser medible. Si las excepciones rinden igual que la política, la política es demasiado estricta; si rinden mucho peor, falta control.",
     notes: "Lo ideal es tener los dos lados medidos. En muchas entidades solo se mide el low-side." });
+  const fac = [["Automático", "Analista", "Jefe de admisión", "Comité de créditos"], ["Automático", "Automático", "Analista", "Jefe de admisión"], ["Automático", "Automático", "Automático", "Analista"]];
+  const fcol = { "Automático": "D8F0E3", "Analista": "FFF4D6", "Jefe de admisión": "FBD9DE", "Comité de créditos": "F4B6BE" };
+  L.sTable(D, { title: "Facultades: quién puede aprobar qué", w: 9.3, colW: [1.7, 1.9, 1.9, 1.9, 1.9], rowH: 0.85, fsize: 14,
+    header: ["Riesgo \\ monto", "≤ S/ 15 mil", "S/ 15-40 mil", "S/ 40-100 mil", "> S/ 100 mil"],
+    rows: ["Alto", "Medio", "Bajo"].map((r, i) => [r, ...fac[i].map(f => ({ text: f, options: { fill: { color: fcol[f] }, align: "center", bold: false } }))]),
+    side: ["La matriz de facultades es la traducción operativa del apetito", "En el caso, ~81 % de las solicitudes se resuelve automáticamente", "El comité ve pocos casos, pero con alto monto en riesgo", "Toda excepción se aprueba dentro de una facultad y queda registrada"],
+    notes: "Valores de la simulación del notebook M01_S01, sección 5." });
   L.sStats(D, { title: "El costo de las excepciones en nuestro caso", stats: [
     { v: "3,1 %", l: "de la cartera aprobada entra por excepción", color: L.HEX.navy },
     { v: "20,1 %", l: "tasa de malos de las excepciones" },
@@ -162,6 +189,6 @@ const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
     "La curva de estrategia hace explícito el trade-off volumen-riesgo; la rentabilidad decide dónde pararse.",
     "Score (voluntad) y RCI (capacidad) son complementarios: la matriz de decisión los combina.",
     "Una excepción que no se mide no es una excepción: es una política paralela.",
-  ], next: "calidad de cartera, pérdidas, provisiones y rentabilidad.", notes: "Cierre y preguntas." });
+  ], next: "indicadores de cartera, provisiones, capital, pricing y RAROC.", notes: "Cierre y preguntas." });
   await L.save(D, OUT);
 })();
